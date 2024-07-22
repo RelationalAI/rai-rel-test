@@ -1,0 +1,16 @@
+name = "RAIRelTest"
+uuid = "e61cca87-0504-4c6f-968f-8447d812e169"
+authors = ["Thiago Tonelli Bartolomei <thiago.tonelli@relational.ai>"]
+version = "0.1.0"
+
+[deps]
+ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+PkgTemplates = "14b8a8f1-9102-5b29-a752-f990bacb7fe1"
+RAI = "9c30249a-7e08-11ec-0e99-a323e937e79f"
+RAITest = "c631b9c8-0012-4e76-a6f8-6f70f8f987b9"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+ReTestItems = "817f1d60-ba6b-4fd5-9520-3cf149f6a823"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
