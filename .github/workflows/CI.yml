@@ -20,4 +20,4 @@ jobs:
 
       - name: Test RAIRelTest
         run: |
-         julia --project=. test/runtests.jl
+          julia --project=. test/runtests.jl
