@@ -1,0 +1,36 @@
+name: Test Package
+description: Executes the test suites declared by a Rel package.
+
+inputs:
+  package-directory:
+    required: true
+    description: "The directory where the package sources and tests are located."
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Checkout rai-rel-test
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          repository: 'RelationalAI/rai-rel-test'
+          path: rai-rel-test
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+
+      - uses: RelationalAI/gha-setup-rai@v1.1.0
+        with:
+          rai_profile: default
+          rai_environment: staging
+          client_id: ${{ secrets.RAICLOUD_STAGING_RELATIONALAI_GHA_TRANSIENT_CLIENT_ID }}
+          client_secret: ${{ secrets.RAICLOUD_STAGING_RELATIONALAI_GHA_TRANSIENT_CLIENT_SECRET }}
+
+      - name: Build packages
+        run: |
+          julia --project=./rai-rel-test --color=yes  -e 'using Pkg; Pkg.build()'
+
+      - name: Run package tests
+        run: |
+          ./rai-rel-test/rai-rel-test --pool_size 2 test_package "${{ inputs.package-directory }}"
