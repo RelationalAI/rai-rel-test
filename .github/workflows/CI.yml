@@ -1,0 +1,23 @@
+name: CI
+on:
+  pull_request:
+
+jobs:
+  build_rai_rel_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+
+      - name: Build package
+        run: |
+          julia --project=./ --color=yes  -e 'using Pkg; Pkg.build()'
+
+      - name: Test RAIRelTest
+        run: |
+         julia --project=. test/runtests.jl

@@ -65,14 +65,26 @@ function pkg_name(directory::AbstractString)
     return basename
 end
 
+"""
+Get the name of the suite in this directory.
+
+If there is a `/test/` directory, the suite name is the path after that, otherwise return
+the canonical directory name.
+"""
 function suite_name(directory::AbstractString)
     parts = split(directory, "/test/")
-    length(parts) > 0 && return last(parts)
-    return directory
+    length(parts) > 1 && return canonical(last(parts))
+    return unix_basename(directory)
 end
 
+"""
+Get the name of the test in this rel file.
+
+This is name of the suite + / + the filename.
+"""
 function test_name(file::AbstractString)
-    return suite_name(file)[1:end-4]
+    endswith(file, ".rel") && return suite_name(file)[1:end-4]
+    return suite_name(file)
 end
 
 #
