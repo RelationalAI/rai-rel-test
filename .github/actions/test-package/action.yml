@@ -3,12 +3,13 @@ description: Executes the test suites declared by a Rel package.
 
 inputs:
   package-directory:
-    required: true
     description: "The directory where the package sources and tests are located."
+    required: false
+    default: ${{ github.workspace }}
 
   pool-size:
-    required: false
     description: "The size of the engine pool to use"
+    required: false
     default: 1
 
 runs:
