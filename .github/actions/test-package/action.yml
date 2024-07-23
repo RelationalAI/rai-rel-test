@@ -21,9 +21,11 @@ runs:
           version: '1.10'
 
       - name: Build packages
+        shell: bash
         run: |
           julia --project=./rai-rel-test --color=yes  -e 'using Pkg; Pkg.build()'
 
       - name: Run package tests
+        shell: bash
         run: |
           ./rai-rel-test/rai-rel-test --pool_size 2 test_package "${{ inputs.package-directory }}"
