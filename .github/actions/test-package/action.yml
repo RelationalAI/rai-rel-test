@@ -20,13 +20,6 @@ runs:
         with:
           version: '1.10'
 
-      - uses: RelationalAI/gha-setup-rai@v1.1.0
-        with:
-          rai_profile: default
-          rai_environment: staging
-          client_id: ${{ secrets.RAICLOUD_STAGING_RELATIONALAI_GHA_TRANSIENT_CLIENT_ID }}
-          client_secret: ${{ secrets.RAICLOUD_STAGING_RELATIONALAI_GHA_TRANSIENT_CLIENT_SECRET }}
-
       - name: Build packages
         run: |
           julia --project=./rai-rel-test --color=yes  -e 'using Pkg; Pkg.build()'
