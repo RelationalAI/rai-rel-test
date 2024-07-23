@@ -16,11 +16,11 @@ runs:
       - name: Build packages
         shell: bash
         run: |
-          cd $GITHUB_ACTION_PATH/../../
+          cd $GITHUB_ACTION_PATH/../../../
           julia --project=./ --color=yes  -e 'using Pkg; Pkg.build()'
 
       - name: Run package tests
         shell: bash
         run: |
-          cd $GITHUB_ACTION_PATH/../../
+          cd $GITHUB_ACTION_PATH/../../../
           ./rai-rel-test --pool_size 2 test_package "${{ inputs.package-directory }}"
