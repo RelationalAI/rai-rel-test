@@ -202,7 +202,7 @@ function generate_install_package_code(
         !haskey(model, "name") &&
             error("Invalid 'models' entry: field 'name' is mandatory.")
         name = model["name"]
-        input = "_input_" * replace(name, "/" => "_") * "_"
+        input = "_input_" * replace(name, r"/|-" => "_") * "_"
 
         model_file = joinpath(
             package_dir,
