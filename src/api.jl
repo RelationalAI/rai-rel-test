@@ -50,7 +50,7 @@ function test_packages(
 
     try
         @testset verbose = true begin
-            for package_dir in package_dirs
+            for package_dir in map(canonical, package_dirs)
                 if !isdir(package_dir)
                     @warn "Package dir is not a directory: '$package_dir'"
                     continue

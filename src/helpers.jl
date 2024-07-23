@@ -43,9 +43,15 @@ function unix_basename(path::AbstractString)
 end
 
 """
-Make sure trailing separator is removed from the path.
+Try to resolve the path, and then make sure trailing separator is removed from it.
 """
 function canonical(path::AbstractString)
+    try
+        # attempt to resolve the path to the filesystem
+        path = realpath(path)
+    catch
+        # ignore and use the incoming string anyway
+    end
     return joinpath(splitpath(path))
 end
 
