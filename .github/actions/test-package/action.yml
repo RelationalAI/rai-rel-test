@@ -28,4 +28,4 @@ runs:
         shell: bash
         run: |
           cd $GITHUB_ACTION_PATH/../../../
-          ./rai-rel-test --pool_size ${{ pool-size }} test_package "${{ inputs.package-directory }}"
+          ./rai-rel-test --pool_size ${{ inputs.pool-size }} test_package "${{ inputs.package-directory }}"
