@@ -23,9 +23,9 @@ runs:
       - uses: RelationalAI/gha-setup-rai@v1.1.0
         with:
           rai_profile: default
-          rai_environment: staging
-          client_id: ${{ secrets.RAICLOUD_STAGING_RELATIONALAI_GHA_TRANSIENT_CLIENT_ID }}
-          client_secret: ${{ secrets.RAICLOUD_STAGING_RELATIONALAI_GHA_TRANSIENT_CLIENT_SECRET }}
+          rai_environment: latest
+          client_id: ${{ secrets.RAICLOUD_LATEST_RELATIONALAI_GHA_TRANSIENT_CLIENT_ID }}
+          client_secret: ${{ secrets.RAICLOUD_LATEST_RELATIONALAI_GHA_TRANSIENT_CLIENT_SECRET }}
 
       - name: Build packages
         run: |
