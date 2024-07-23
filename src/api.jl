@@ -567,7 +567,7 @@ function start_pool(config::Union{Config,Nothing}=nothing, size::Int=1)
         RAI.create_engine(config.context, name; size="S")
         return RAITest._wait_till_provisioned(name, 600)
     end)
-    return RAITest.resize_test_engine_pool!(size, id -> gen_safe_name("RAIRelTest")
+    return RAITest.resize_test_engine_pool!(size, id -> gen_safe_name("RAIRelTest"))
 end
 
 """
