@@ -6,6 +6,11 @@ inputs:
     required: true
     description: "The directory where the package sources and tests are located."
 
+  pool-size:
+    required: false
+    description: "The size of the engine pool to use"
+    default: 1
+
 runs:
   using: 'composite'
   steps:
@@ -23,4 +28,4 @@ runs:
         shell: bash
         run: |
           cd $GITHUB_ACTION_PATH/../../../
-          ./rai-rel-test --pool_size 2 test_package "${{ inputs.package-directory }}"
+          ./rai-rel-test --pool_size ${{ pool-size }} test_package "${{ inputs.package-directory }}"
