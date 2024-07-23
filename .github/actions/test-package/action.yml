@@ -15,6 +15,7 @@ runs:
           fetch-depth: 0
           repository: 'RelationalAI/rai-rel-test'
           path: rai-rel-test
+          ref: ttb-ci
 
       - uses: julia-actions/setup-julia@v2
         with:
