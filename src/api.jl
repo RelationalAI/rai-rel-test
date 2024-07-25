@@ -162,7 +162,7 @@ function run_package_testitems(
 
     try
         @testset RAITestSet "$package Julia tests" begin
-            run_testitems(joinpath(package_dir, "test"), db, config)
+            run_testitems(joinpath(package_dir, "test"), db, config=config)
         end
     finally
         # cleanup the db created by prepare_package
