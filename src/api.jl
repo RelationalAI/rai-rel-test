@@ -52,8 +52,8 @@ function test_packages(
         @testset verbose = true begin
             for package_dir in map(canonical, package_dirs)
                 if !isdir(package_dir)
-                    @warn "Package dir is not a directory: '$package_dir'"
-                    continue
+                    # error out as this may hide configuration issues
+                    error("Package dir is not a directory: '$package_dir'")
                 end
                 package = pkg_name(package_dir)
 
@@ -160,21 +160,49 @@ function run_package_testitems(
 
     progress(package, "Running Julia package tests...")
 
-    # make sure RAITest is properly configured
-    RAITest.set_context!(get_some_context(or_else(() -> load_config(), config)))
-    RAITest.set_clone_db!(db)
-    !isnothing(config.engine) && RAITest.set_test_engine!(config.engine)
-
     try
         @testset RAITestSet "$package Julia tests" begin
-            ReTestItems.runtests(joinpath(package_dir, "test"))
+            run_testitems(joinpath(package_dir, "test"), db, config)
         end
     finally
-        RAITest.set_clone_db!(nothing)
-        RAITest.set_test_engine!(nothing)
         # cleanup the db created by prepare_package
         !skip_prepare && delete_db(db, config)
     end
+    return
+end
+
+"""
+    run_testitems(
+        path::AbstractString,
+        database::AbstractString;
+        config::Union{Config,Nothing}=nothing,
+    )
+
+Run the julia ReTestItems-based tests in this path.
+
+The `database` must already be prepared and ready to run the tests.
+"""
+function run_testitems(
+    path::AbstractString,
+    database::AbstractString;
+    config::Union{Config,Nothing}=nothing,
+)
+
+    # load default if needed
+    config = or_else(() -> load_config(), config)
+
+    # make sure RAITest is properly configured
+    RAITest.set_context!(get_some_context(or_else(() -> load_config(), config)))
+    RAITest.set_clone_db!(database)
+    !isnothing(config.engine) && RAITest.set_test_engine!(config.engine)
+
+    try
+        ReTestItems.runtests(path)
+    finally
+        RAITest.set_clone_db!(nothing)
+        RAITest.set_test_engine!(nothing)
+    end
+    return
 end
 
 """
@@ -201,8 +229,7 @@ function run_package_suites(
     skip_prepare::Bool=false,
 )
     if skip_prepare && isnothing(database)
-        @error("Cannot skip package preparation without a database.")
-        return
+        error("Cannot skip package preparation without a database.")
     end
 
     package = pkg_name(package_dir)
@@ -419,7 +446,7 @@ end
 """
     prepare_package(
         package_dir::AbstractString,
-        database::AbstractString,
+        database::Union{AbstractString,Nothing}=nothing,
         with_deps::Bool=false;
         config::Union{Config,Nothing}=nothing,
     )
@@ -428,10 +455,12 @@ Prepare a `database` to run tests in this `package_dir`.
 
 Create a new database with this name, then install the package sources, and execute the
 `before-package.rel` script for the package, if it exists.
+
+It `database` is nothing, generate a name based on the package name.
 """
 function prepare_package(
     package_dir::AbstractString,
-    database::AbstractString,
+    database::Union{AbstractString,Nothing}=nothing,
     with_deps::Bool=false;
     config::Union{Config,Nothing}=nothing,
 )
@@ -439,22 +468,29 @@ function prepare_package(
     # load default if needed
     config = or_else(() -> load_config(), config)
 
+    package = pkg_name(package_dir)
+    db = something(database, gen_safe_name(package))
+
     # create the database
-    create_db(database, config)
+    create_db(db, config)
 
-    # install the package sources
-    !install_package(package_dir, database, with_deps; config=config) &&
-        error("Installation of package in '$package_dir' failed.")
+    try
+        # install the package sources
+        !install_package(package_dir, db, with_deps; config=config) &&
+            error("Installation of package in '$package_dir' failed.")
 
-    # potentially run its before-package.rel script
-    blocks = parse_source_file(package_dir, joinpath("test", "before-package.rel"))
-    if !isempty(blocks)
-        ctx = "$(pkg_name(package_dir))/before-package"
-        progress(ctx, "Processing 'before-package.rel'...")
-        with_engine(config) do engine
-            return !execute_blocks(ctx, blocks, database, engine, config) &&
-                   error("Processing of 'before-package.rel' failed.")
+        # potentially run its before-package.rel script
+        blocks = parse_source_file(package_dir, joinpath("test", "before-package.rel"))
+        if !isempty(blocks)
+            ctx = "$(pkg_name(package_dir))/before-package"
+            progress(ctx, "Processing 'before-package.rel'...")
+            with_engine(config) do engine
+                return !execute_blocks(ctx, blocks, db, engine, config) &&
+                    error("Processing of 'before-package.rel' failed.")
+            end
         end
+    catch
+        delete_db(db, config)
     end
     return
 end
