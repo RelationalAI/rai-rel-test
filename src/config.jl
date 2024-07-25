@@ -11,7 +11,7 @@ struct Config
     context::Union{RAI.Context,Nothing}
     # The RAI engine to use for the operation. If empty, assume we can grab one from
     # the test engine pool (must be managed with `start_pool!` and `stop_pool!`.
-    engine::Union{AbstractString,Nothing}
+    engine::Union{String,Nothing}
 end
 
 """

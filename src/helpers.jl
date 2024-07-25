@@ -259,8 +259,8 @@ A code block is a section of a file that represents code to execute as a standal
 transaction, and includes expectations regarding the results.
 """
 struct CodeBlock
-    basename::AbstractString
-    code::AbstractString
+    basename::String
+    code::String
     write::Bool
     expect_warnings::Bool
     expect_errors::Bool
