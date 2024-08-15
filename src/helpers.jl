@@ -60,7 +60,7 @@ Assuming the convention that packages live in directories called \$(pkgname)-rel
 extracts the package name from a directory name, which can include a prefix.
 """
 function pkg_name(directory::AbstractString)
-    basename = unix_basename(directory)
+    basename = unix_basename(canonical(directory))
     endswith(basename, "-rel") && return unix_basename(basename)[1:end-4]
     return basename
 end
