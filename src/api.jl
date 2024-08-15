@@ -161,7 +161,7 @@ function run_package_testitems(
     progress(package, "Running Julia package tests...")
 
     try
-        @testset RAITestSet "$package Julia tests" begin
+        @testset verbose = true "$package Julia tests" begin
             run_testitems(joinpath(package_dir, "test"), db, config=config)
         end
     finally
@@ -185,6 +185,7 @@ The `database` must already be prepared and ready to run the tests.
 function run_testitems(
     path::AbstractString,
     database::AbstractString;
+    name::Union{AbstractString,Nothing}=nothing,
     config::Union{Config,Nothing}=nothing,
 )
 
@@ -197,7 +198,7 @@ function run_testitems(
     !isnothing(config.engine) && RAITest.set_test_engine!(config.engine)
 
     try
-        ReTestItems.runtests(path)
+        ReTestItems.runtests(path; name=name)
     finally
         RAITest.set_clone_db!(nothing)
         RAITest.set_test_engine!(nothing)
