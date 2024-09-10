@@ -26,6 +26,7 @@ export test_packages,
     run_script,
     prepare_package,
     prepare_suite,
+    prepare_for_test,
     install_package
 
 # test engine pool
