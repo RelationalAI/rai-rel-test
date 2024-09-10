@@ -551,6 +551,43 @@ function prepare_suite(
     return db
 end
 
+
+"""
+    prepare_for_test(test_file::AbstractString, config::Union{Config,Nothing}=nothing)
+
+Convenience function to prepare a database to run a specific test.
+
+This function will do all the prep work to allow the test to run. It will:
+    * create a new database
+    * install the package where the test file lives
+    * run the package's `before-package.rel`, if it exists
+    * if the test file is in a directory with `before-suite.rel`, clone the previous
+      database and run it in the clone.
+
+The function will @info the names of the databases created. It will return the last database
+created, which can then be used as the `prototype` argument to `run_test`.
+
+"""
+function prepare_for_test(test_file::AbstractString, config::Union{Config,Nothing}=nothing)
+    @info "Preparing database(s) to run test in '$test_file'..."
+
+    package_dir = find_package_dir(test_file)
+    isnothing(package_dir) && error("Could not find the package for '$test_file'.")
+
+    package = pkg_name(package_dir)
+    db = gen_safe_name(package)
+    prepare_package(package_dir, db, false; config=config)
+
+    suite_db = prepare_suite(dirname(test_file), db; config=config)
+    if suite_db == db
+        @info "Package and suite prepared in database '$db'."
+        return db
+    else
+        @info "Package prepared in database '$db', suite prepared in '$suite_db'."
+        return suite_db
+    end
+end
+
 """
     run_script(
         script_file::AbstractString,

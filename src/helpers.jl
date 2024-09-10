@@ -94,7 +94,8 @@ end
 """
 Create an empty database using a random name based on this basename.
 """
-function create_random_db(basename::AbstractString, config::Config)
+function create_random_db(basename::AbstractString, config::Union{Config,Nothing}=nothing)
+    config = or_else(() -> load_config(), config)
     name = gen_safe_name(basename)
     try
         result = RAI.create_database(config.context, name)
@@ -114,7 +115,8 @@ end
 """
 Create a database with this name.
 """
-function create_db(database::AbstractString, config::Config)
+function create_db(database::AbstractString, config::Union{Config,Nothing}=nothing)
+    config = or_else(() -> load_config(), config)
     try
         result = RAI.create_database(config.context, database)
         if result["database"]["state"] == "CREATED"
@@ -133,7 +135,8 @@ end
 """
 Clone the database db and return the name of the new database
 """
-function clone_db(source::AbstractString, target::AbstractString, config::Config)
+function clone_db(source::AbstractString, target::AbstractString, config::Union{Config,Nothing}=nothing)
+    config = or_else(() -> load_config(), config)
     try
         result = RAI.create_database(config.context, target, source=source)
         @debug result
@@ -155,7 +158,8 @@ end
 """
 Delete the database with this name.
 """
-function delete_db(database::AbstractString, config::Config)
+function delete_db(database::AbstractString, config::Union{Config,Nothing}=nothing)
+    config = or_else(() -> load_config(), config)
     try
         RAI.delete_database(config.context, database)
     catch e
@@ -606,6 +610,14 @@ function find_nearest_test_dirs(paths::Vector{T}) where {T<:AbstractString}
     return sort!([test_dirs...])
 end
 
+function find_package_dir(path::AbstractString)
+    !ispath(path) && return
+    dir = dirname(realpath(path))
+    dir == path && return
+    has_rel_package_json(dir) && return dir
+    return find_package_dir(dir)
+end
+
 """
 Find all files in this `directory` that are Rel test files.
 """
@@ -628,4 +640,8 @@ function has_julia_files(directory::AbstractString)
         any(x -> endswith(x, ".jl"), files) && return true
     end
     return false
+end
+
+function has_rel_package_json(directory::AbstractString)
+    return ! isempty(filter(x -> x == "rel-package.json", readdir(directory)))
 end
