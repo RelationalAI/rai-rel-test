@@ -68,3 +68,25 @@
         @test test_name("../../pkg//test/foo/bar/baz.rel") == "foo/bar/baz"
     end
 end
+
+
+@testitem "test finding" begin
+    using RAIRelTest
+
+    @testset "get_diff_filters" begin
+        using RAIRelTest: get_diff_filters
+
+        @test get_diff_filters(["model/std/common.rel"]) == Set(["std/common"])
+        @test get_diff_filters(["test/before-package.rel"]) == Set([])
+        @test get_diff_filters(["test/std/common/test-jaro_distance.rel"]) == Set(["std/common"])
+        @test get_diff_filters(["test/std/common/test-jaro_winkler_distance.rel"]) == Set(["std/common"])
+
+        # returned value is a set, so it removes duplicates
+        @test length(get_diff_filters([
+            "model/std/common.rel",
+            "test/before-package.rel",
+            "test/std/common/test-jaro_distance.rel",
+            "test/std/common/test-jaro_winkler_distance.rel"
+        ])) == 1
+    end
+end

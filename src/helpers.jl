@@ -564,10 +564,10 @@ end
 """
 Find all directories under `base_dirs` that have Rel test suites.
 """
-function find_test_dirs(base_dirs::Vector{T}) where {T<:AbstractString}
+function find_test_dirs(base_dirs::Vector{T}; filter::Union{Function,Nothing}=nothing) where {T<:AbstractString}
     test_dirs = Set{String}()
     for base_dir in base_dirs
-        union!(test_dirs, find_test_dirs(base_dir))
+        union!(test_dirs, find_test_dirs(base_dir, filter=filter))
     end
     return sort!([test_dirs...])
 end
@@ -575,7 +575,7 @@ end
 """
 Find all directories under `base_dir` that have Rel test suites.
 """
-function find_test_dirs(base_dir::AbstractString=".")
+function find_test_dirs(base_dir::AbstractString="."; filter::Union{Function,Nothing}=nothing)
     isfile(base_dir) && return find_test_dirs(dirname(base_dir))
     test_dirs = Set{String}()
     for (root, _, files) in walkdir(base_dir)
@@ -586,7 +586,40 @@ function find_test_dirs(base_dir::AbstractString=".")
         end
     end
 
+    !isnothing(filter) && filter!(filter, test_dirs)
+
     return sort!([test_dirs...])
+end
+
+"""
+Given a list of changed files (e.g. from a diff between git branches), return a set of
+filters (namespace names) that can be used to filter test_dirs to return only suites
+affected by those file changes.
+
+This is useful, for example, to run only the test suites that were impacted by a PR, instead
+of having to run them all.
+"""
+function get_diff_filters(changes::Vector{T}) where {T<:AbstractString}
+    filters = Set{String}()
+    for match in changes
+        # model/std/common.rel -> std/common
+        if startswith(match, "model/") && endswith(match, ".rel")
+            push!(filters, match[7:end-4])
+        end
+        # test/std/common/test-foo.rel -> std/common
+        if startswith(match, "test/") && endswith(match, ".rel") && occursin("test-", match)
+            push!(filters, match[6:findlast('/', match)-1])
+        end
+    end
+    return filters
+end
+
+"""
+Given a set of filters returned by get_diff_filters, return a function that, given a name,
+will check if the name occurs in any of those filters.
+"""
+function make_diff_filter(filters::Set{String})
+    return (test_dir -> isempty(filters) || any(filter -> occursin(filter, test_dir), filters))
 end
 
 # Find the nearest directory containing test-*.rel files
