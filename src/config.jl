@@ -47,7 +47,7 @@ end
 Set the `context` field on the `session_config`, falling back to loading the default.
 """
 function set_session_context!(profile::Union{AbstractString,Nothing})
-    ctx = load_context(profile=something(profile, "default"))
+    ctx = load_context(something(profile, "default"))
     return global session_config = Config(ctx, session_config.engine)
 end
 

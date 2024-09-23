@@ -122,10 +122,10 @@ function create_db(database::AbstractString, config::Union{Config,Nothing}=nothi
         if result["database"]["state"] == "CREATED"
             return result["database"]["name"]
         end
-        error("Failed to create database $(config.database): $result")
+        error("Failed to create database $(database): $result")
     catch e
         if e isa RAI.HTTPError && e.status_code == 409
-            error("Database $(config.database) already exists")
+            error("Database $(database) already exists")
         else
             rethrow()
         end

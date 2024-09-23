@@ -129,7 +129,7 @@ function test_package(
 end
 
 """
-    run_package_suites(
+    run_package_testitems(
         package_dir::AbstractString,
         database::Union{AbstractString,Nothing}=nothing;
         config::Union{Config,Nothing}=nothing,
@@ -492,6 +492,7 @@ function prepare_package(
         end
     catch
         delete_db(db, config)
+        rethrow()
     end
     return
 end
