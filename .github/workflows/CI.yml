@@ -1,6 +1,9 @@
 name: CI
 on:
   pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
   build_rai_rel_test:
