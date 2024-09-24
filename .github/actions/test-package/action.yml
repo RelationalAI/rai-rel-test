@@ -34,7 +34,5 @@ runs:
       - name: Run package tests
         shell: bash
         run: |
-          CHANGES=${{ inputs.changes }}
-          echo "Received changes: $CHANGES"
           cd $GITHUB_ACTION_PATH/../../../
-          ./rai-rel-test --pool_size ${{ inputs.pool-size }} test_package "${{ inputs.package-directory }}" --changes "$CHANGES"
+          ./rai-rel-test --pool_size ${{ inputs.pool-size }} test_package "${{ inputs.package-directory }}" --changes "${{ inputs.changes }}"
