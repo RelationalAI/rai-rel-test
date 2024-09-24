@@ -678,3 +678,7 @@ end
 function has_rel_package_json(directory::AbstractString)
     return ! isempty(filter(x -> x == "rel-package.json", readdir(directory)))
 end
+
+function has_rel_or_jl_name(names::Vector{T}) where {T<:AbstractString}
+    any(x -> endswith(x, ".jl") || endswith(x, ".rel"), names)
+end

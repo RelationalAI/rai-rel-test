@@ -32,13 +32,14 @@ execution of tests, and it will be stopped before returning. A pool is required 
 `config` does not set an engine or if any package has Julia tests (those cannot use an
 explicit engine).
 
-
 The `changes` parameter is a list of file names that changed in this package. If it is
 nothing, then all suites on the package are executed. But if it contains file names, then
 this  function will filter the test suites to execute only the ones that would be affected
 by changes in those files. For example, if the file is a test in `test/foo/test-bar.rel`
 then the suite `test/foo` is considered as affected, and if it is a model in
-`model/a/b/bar.rel`, then the test suite `test/a/b` is affected.
+`model/a/b/bar.rel`, then the test suite `test/a/b` is affected. Note that if the changes
+argument is non-empty but does not contain any `.rel` or `.jl` file, then no tests are
+executed.
 """
 function test_packages(
     package_dirs::Vector{T},
@@ -52,6 +53,11 @@ function test_packages(
 
     # load default if needed
     config = or_else(() -> load_config(), config)
+
+    if !isnothing(changes) && !has_rel_or_jl_name(changes)
+        @info "Skipping tests because changes do not involve rel or julia files..."
+        return
+    end
 
     if isnothing(config.engine)
         @info "Starting pool of $pool_size testing engine(s)..."
