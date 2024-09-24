@@ -36,6 +36,7 @@ function cli(args::Vector{T}) where {T<:AbstractString}
                 skip_testitems=parsed_args[:test_package][:skip_testitems],
                 pool_size=parsed_args[:pool_size],
                 config=config,
+                changes=parsed_args[:test_package][:changes]
             )
         elseif command == :run_suite
             RAIRelTest.run_suite(
@@ -173,6 +174,10 @@ function parse_arguments(args::Vector{T}) where {T<:AbstractString}
         "--skip_testitems"
         help = "Skip the execution of julia-based test cases (ReTestItem tests)."
         action = :store_true
+        "--changes"
+        help = "List of files in the package which changed, to select only affected tests."
+        nargs = '*'
+        arg_type = String
     end
 
     ArgParse.@add_arg_table! s["run_suite"] begin

@@ -14,7 +14,8 @@ using ReTestItems
         skip_testitems::Bool=false,
         pool_size::Int=1,
         config::Union{Config,Nothing}=nothing,
-    ) where {T<:AbstractString}
+        changes::Union{Vector{U},Nothing}=nothing,
+    ) where {T<:AbstractString, U<:AbstractString}
 
 Run all tests in these packages.
 
@@ -30,6 +31,15 @@ If a testing engine pool is required by any package, it will be started prior to
 execution of tests, and it will be stopped before returning. A pool is required either if
 `config` does not set an engine or if any package has Julia tests (those cannot use an
 explicit engine).
+
+The `changes` parameter is a list of file names that changed in this package. If it is
+nothing, then all suites on the package are executed. But if it contains file names, then
+this  function will filter the test suites to execute only the ones that would be affected
+by changes in those files. For example, if the file is a test in `test/foo/test-bar.rel`
+then the suite `test/foo` is considered as affected, and if it is a model in
+`model/a/b/bar.rel`, then the test suite `test/a/b` is affected. Note that if the changes
+argument is non-empty but does not contain any `.rel` or `.jl` file, then no tests are
+executed.
 """
 function test_packages(
     package_dirs::Vector{T},
@@ -38,10 +48,16 @@ function test_packages(
     skip_testitems::Bool=false,
     pool_size::Int=1,
     config::Union{Config,Nothing}=nothing,
-) where {T<:AbstractString}
+    changes::Union{Vector{U},Nothing}=nothing,
+) where {T<:AbstractString, U<:AbstractString}
 
     # load default if needed
     config = or_else(() -> load_config(), config)
+
+    if !isnothing(changes) && !has_rel_or_jl_name(changes)
+        @info "Skipping tests because changes do not involve any Rel or Julia files..."
+        return
+    end
 
     if isnothing(config.engine)
         @info "Starting pool of $pool_size testing engine(s)..."
@@ -70,6 +86,7 @@ function test_packages(
                             db,
                             config=config,
                             skip_prepare=true,
+                            changes=changes
                         )
                         !skip_testitems &&
                             has_julia_files(package_dir) &&
@@ -103,12 +120,20 @@ end
         skip_testitems::Bool=false,
         pool_size::Int=1,
         config::Union{Config,Nothing}=nothing,
-    )
+        changes::Union{Vector{T},Nothing}=nothing,
+    ) where {T<:AbstractString}
 
 Run all tests in this package.
 
 This is the same as `test_packages` but with a single package. It will run both Rel as well
 as Julia tests (unless skipped).
+
+The `changes` parameter is a list of file names that changed in this package. If it is
+nothing, then all suites on the package are executed. But if it contains file names, then
+this  function will filter the test suites to execute only the ones that would be affected
+by changes in those files. For example, if the file is a test in `test/foo/test-bar.rel`
+then the suite `test/foo` is considered as affected, and if it is a model in
+`model/a/b/bar.rel`, then the test suite `test/a/b` is affected.
 """
 function test_package(
     package_dir::AbstractString,
@@ -117,7 +142,9 @@ function test_package(
     skip_testitems::Bool=false,
     pool_size::Int=1,
     config::Union{Config,Nothing}=nothing,
-)
+    changes::Union{Vector{T},Nothing}=nothing,
+) where {T<:AbstractString}
+
     return test_packages(
         [package_dir],
         db_prefix,
@@ -125,6 +152,7 @@ function test_package(
         skip_testitems=skip_testitems,
         pool_size=pool_size,
         config=config,
+        changes=changes
     )
 end
 
@@ -212,7 +240,8 @@ end
         database::Union{AbstractString,Nothing}=nothing;
         config::Union{Config,Nothing}=nothing,
         skip_prepare::Bool=false,
-    )
+        changes::Union{Vector{T},Nothing}=nothing,
+    ) where {T<:AbstractString}
 
 Run all Rel test suites in this package.
 
@@ -222,13 +251,21 @@ tests, otherwise we generate a database name based on the package name.
 If `skip_prepare` is set, assume that `database` is already prepared. Otherwise, create a
 database with this `database` name and install this `package`. Finally, run every Rel
 suite found in the package's `test` directory.
+
+The `changes` parameter is a list of file names that changed in this package. If it is
+nothing, then all suites on the package are executed. But if it contains file names, then
+this  function will filter the test suites to execute only the ones that would be affected
+by changes in those files. For example, if the file is a test in `test/foo/test-bar.rel`
+then the suite `test/foo` is considered as affected, and if it is a model in
+`model/a/b/bar.rel`, then the test suite `test/a/b` is affected.
 """
 function run_package_suites(
     package_dir::AbstractString,
     database::Union{AbstractString,Nothing}=nothing;
     config::Union{Config,Nothing}=nothing,
     skip_prepare::Bool=false,
-)
+    changes::Union{Vector{T},Nothing}=nothing,
+) where {T<:AbstractString}
     if skip_prepare && isnothing(database)
         error("Cannot skip package preparation without a database.")
     end
@@ -236,10 +273,16 @@ function run_package_suites(
     package = pkg_name(package_dir)
     progress(package, "Running Rel package tests...")
 
-    suites = find_test_dirs(package_dir)
+    filter = isnothing(changes) ? nothing : make_diff_filter(get_diff_filters(changes))
+    suites = find_test_dirs(package_dir, filter=filter)
+
     if isempty(suites)
         progress(package, "No Rel test suites found under '$package' directory.")
         return
+    elseif isnothing(filter)
+        progress(package, "Found $(length(suites)) suites: $suites")
+    else
+        progress(package, "Found $(length(suites)) suites matching the changes: $suites")
     end
 
     db = something(database, gen_safe_name(package))
@@ -250,7 +293,6 @@ function run_package_suites(
         # TODO - we may want to move to with_deps = true when pkg is always installed
         !skip_prepare && prepare_package(package_dir, db, false; config=config)
 
-        progress(package, "Found $(length(suites)) suites: $suites")
 
         @testset verbose = true "$package Rel tests" begin
             cache = Dict{String,Vector{RAITest.Step}}()
@@ -490,7 +532,8 @@ function prepare_package(
                     error("Processing of 'before-package.rel' failed.")
             end
         end
-    catch
+    catch e
+        warn(package, "Deleting database '$db' due to error in preparing package...")
         delete_db(db, config)
         rethrow()
     end
