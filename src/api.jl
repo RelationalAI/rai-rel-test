@@ -55,7 +55,7 @@ function test_packages(
     config = or_else(() -> load_config(), config)
 
     if !isnothing(changes) && !has_rel_or_jl_name(changes)
-        @info "Skipping tests because changes do not involve rel or julia files..."
+        @info "Skipping tests because changes do not involve any Rel or Julia files..."
         return
     end
 
