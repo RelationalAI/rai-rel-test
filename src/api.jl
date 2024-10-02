@@ -203,6 +203,7 @@ end
     run_testitems(
         path::AbstractString,
         database::AbstractString;
+        name::Union{AbstractString,Nothing}=nothing,
         config::Union{Config,Nothing}=nothing,
     )
 
