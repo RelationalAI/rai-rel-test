@@ -144,7 +144,7 @@ function parse_arguments(args::Vector{T}) where {T<:AbstractString}
         action = :command
         help =
             "Prepare a database for running package tests. This will create a " *
-            "database, install the package, and run the 'before-package.rel' script."
+            "database, install the package, and run the 'post-install.rel' script."
         "prepare_suite"
         action = :command
         help =
