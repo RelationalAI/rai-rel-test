@@ -203,6 +203,7 @@ end
     run_testitems(
         path::AbstractString,
         database::AbstractString;
+        name::Union{AbstractString,Nothing}=nothing,
         config::Union{Config,Nothing}=nothing,
     )
 
@@ -497,7 +498,7 @@ end
 Prepare a `database` to run tests in this `package_dir`.
 
 Create a new database with this name, then install the package sources, and execute the
-`before-package.rel` script for the package, if it exists.
+`post-install.rel` script for the package, if it exists.
 
 It `database` is nothing, generate a name based on the package name.
 """
@@ -522,11 +523,23 @@ function prepare_package(
         !install_package(package_dir, db, with_deps; config=config) &&
             error("Installation of package in '$package_dir' failed.")
 
-        # potentially run its before-package.rel script
+        # potentially run its post-install.rel script
+        blocks = parse_source_file(package_dir, joinpath("test", "post-install.rel"))
+        if !isempty(blocks)
+            ctx = "$(pkg_name(package_dir))/post-install"
+            progress(ctx, "Processing 'post-install.rel'...")
+            with_engine(config) do engine
+                return !execute_blocks(ctx, blocks, db, engine, config) &&
+                    error("Processing of 'post-install.rel' failed.")
+            end
+        end
+
+        # still look for a before-package.rel script, but warn that this is deprecated;
+        # we should remove this functionality soon.
         blocks = parse_source_file(package_dir, joinpath("test", "before-package.rel"))
         if !isempty(blocks)
             ctx = "$(pkg_name(package_dir))/before-package"
-            progress(ctx, "Processing 'before-package.rel'...")
+            warn(ctx, "Support for 'before-package.rel' is deprecated, rename it to 'post-install.rel'. Processing it anyway...")
             with_engine(config) do engine
                 return !execute_blocks(ctx, blocks, db, engine, config) &&
                     error("Processing of 'before-package.rel' failed.")
@@ -604,7 +617,7 @@ Convenience function to prepare a database to run a specific test.
 This function will do all the prep work to allow the test to run. It will:
     * create a new database
     * install the package where the test file lives
-    * run the package's `before-package.rel`, if it exists
+    * run the package's `post-install.rel`, if it exists
     * if the test file is in a directory with `before-suite.rel`, clone the previous
       database and run it in the clone.
 
