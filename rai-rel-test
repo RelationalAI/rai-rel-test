@@ -7,5 +7,5 @@ PROJECT_DIR="$SCRIPT_DIR"
 if [ "repl" == "$*" ]; then
     julia --project=$PROJECT_DIR --color=yes -i -e 'using Pkg; Pkg.instantiate(); using ReTestItems; using RAIRelTest'
 else
-    julia --project=$PROJECT_DIR --color=yes $PROJECT_DIR/main.jl $*
+    julia --project=$PROJECT_DIR --color=yes $PROJECT_DIR/main.jl "$@"
 fi

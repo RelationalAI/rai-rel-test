@@ -13,6 +13,8 @@ using ReTestItems
         skip_suites::Bool=false,
         skip_testitems::Bool=false,
         pool_size::Int=1,
+        engine_size::AbstractString="S",
+        raicode_commit::Union{AbstractString,Nothing}=nothing,
         config::Union{Config,Nothing}=nothing,
         changes::Union{Vector{U},Nothing}=nothing,
     ) where {T<:AbstractString, U<:AbstractString}
@@ -30,7 +32,9 @@ control that.
 If a testing engine pool is required by any package, it will be started prior to the
 execution of tests, and it will be stopped before returning. A pool is required either if
 `config` does not set an engine or if any package has Julia tests (those cannot use an
-explicit engine).
+explicit engine). The pool size can be set with `pool_size`, and the size of the engines
+created by the pool can be set with `engine_size`. If the build of a specific RAICode commit
+is to be used to create the engines, it can be set with `raicode_commit`.
 
 The `changes` parameter is a list of file names that changed in this package. If it is
 nothing, then all suites on the package are executed. But if it contains file names, then
@@ -47,6 +51,8 @@ function test_packages(
     skip_suites::Bool=false,
     skip_testitems::Bool=false,
     pool_size::Int=1,
+    engine_size::AbstractString="S",
+    raicode_commit::Union{AbstractString,Nothing}=nothing,
     config::Union{Config,Nothing}=nothing,
     changes::Union{Vector{U},Nothing}=nothing,
 ) where {T<:AbstractString, U<:AbstractString}
@@ -60,8 +66,12 @@ function test_packages(
     end
 
     if isnothing(config.engine)
-        @info "Starting pool of $pool_size testing engine(s)..."
-        start_pool(config, pool_size)
+        start_pool(
+            config,
+            pool_size,
+            engine_size=engine_size,
+            raicode_commit=raicode_commit
+        )
     end
 
     try
@@ -119,6 +129,8 @@ end
         skip_suites::Bool=false,
         skip_testitems::Bool=false,
         pool_size::Int=1,
+        engine_size::AbstractString="S",
+        raicode_commit::Union{AbstractString,Nothing}=nothing,
         config::Union{Config,Nothing}=nothing,
         changes::Union{Vector{T},Nothing}=nothing,
     ) where {T<:AbstractString}
@@ -127,6 +139,13 @@ Run all tests in this package.
 
 This is the same as `test_packages` but with a single package. It will run both Rel as well
 as Julia tests (unless skipped).
+
+If a testing engine pool is required by any package, it will be started prior to the
+execution of tests, and it will be stopped before returning. A pool is required either if
+`config` does not set an engine or if any package has Julia tests (those cannot use an
+explicit engine). The pool size can be set with `pool_size`, and the size of the engines
+created by the pool can be set with `engine_size`. If the build of a specific RAICode commit
+is to be used to create the engines, it can be set with `raicode_commit`.
 
 The `changes` parameter is a list of file names that changed in this package. If it is
 nothing, then all suites on the package are executed. But if it contains file names, then
@@ -141,6 +160,8 @@ function test_package(
     skip_suites::Bool=false,
     skip_testitems::Bool=false,
     pool_size::Int=1,
+    engine_size::AbstractString="S",
+    raicode_commit::Union{AbstractString,Nothing}=nothing,
     config::Union{Config,Nothing}=nothing,
     changes::Union{Vector{T},Nothing}=nothing,
 ) where {T<:AbstractString}
@@ -151,6 +172,8 @@ function test_package(
         skip_suites=skip_suites,
         skip_testitems=skip_testitems,
         pool_size=pool_size,
+        engine_size=engine_size,
+        raicode_commit=raicode_commit,
         config=config,
         changes=changes
     )
@@ -682,20 +705,40 @@ function run_script(
 end
 
 """
-    start_pool(config::Union{Config,Nothing}=nothing, size::Int=1)
+    start_pool(
+        config::Union{Config,Nothing}=nothing,
+        size::Int=1;
+        engine_size::AbstractString="S",
+        raicode_commit::Union{AbstractString,Nothing}=nothing,
+    )
 
 Start a testing engine pool with this size.
 
 This may take a while because it will provision `size` engines. Make sure to call
 `stop_pool()` to unprovision the engines.
 """
-function start_pool(config::Union{Config,Nothing}=nothing, size::Int=1)
+function start_pool(
+    config::Union{Config,Nothing}=nothing,
+    size::Int=1;
+    engine_size::AbstractString="S",
+    raicode_commit::Union{AbstractString,Nothing}=nothing,
+    )
     # load default if needed
     config = or_else(() -> load_config(), config)
 
+    # treat the empty string as nothing (allows the cli to pass empty strings)
+    commit_value = isnothing(raicode_commit) || raicode_commit == "" ? nothing : raicode_commit
+    commit_msg = isnothing(commit_value) ? "" : " (commit $(commit_value))"
+    progress("start_pool", "Starting pool with $(size) testing engine(s) of size '$(engine_size)'$(commit_msg)...")
+
     RAITest.set_engine_creater!(function (name::String)
+        headers = Pair{String,String}[]
+        if commit_value !== nothing
+            push!(headers, "x-rai-parameter-compute-version" => commit_value)
+        end
+
         # Default is to use an XS engine
-        RAI.create_engine(config.context, name; size="S")
+        RAI.create_engine(config.context, name; size=engine_size, headers=headers)
         return RAITest._wait_till_provisioned(name, 600)
     end)
     return RAITest.resize_test_engine_pool!(size, id -> gen_safe_name("RAIRelTest"))
