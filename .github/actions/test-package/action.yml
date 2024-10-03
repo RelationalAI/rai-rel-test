@@ -48,6 +48,6 @@ runs:
           ./rai-rel-test \\
             --pool_size ${{ inputs.pool-size }} \\
             --engine_size "${{ inputs.engine-size}}" \\
-            --raicode_commit ${{ inputs.raicode-commit }} \\
+            --raicode_commit "${{ inputs.raicode-commit }}" \\
             test_package "${{ inputs.package-directory }}" \\
             --changes "${{ inputs.changes }}"
