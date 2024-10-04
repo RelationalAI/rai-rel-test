@@ -66,7 +66,7 @@ function test_packages(
     end
 
     if !isnothing(changes)
-        progress("test_packages", "Selecting tests based on these changes: '$changes'...")
+        progress("test_packages", "Selecting tests based on these changes: $changes...")
     end
 
     if isnothing(config.engine)
