@@ -35,6 +35,8 @@ function cli(args::Vector{T}) where {T<:AbstractString}
                 skip_suites=parsed_args[:test_package][:skip_suites],
                 skip_testitems=parsed_args[:test_package][:skip_testitems],
                 pool_size=parsed_args[:pool_size],
+                engine_size=parsed_args[:engine_size],
+                raicode_commit=parsed_args[:raicode_commit],
                 config=config,
                 changes=parsed_args[:test_package][:changes]
             )
@@ -113,6 +115,13 @@ function parse_arguments(args::Vector{T}) where {T<:AbstractString}
         help = "The number of engines to create to run the tests (defaults to 1)."
         default = 1
         arg_type = Int
+        "--engine_size"
+        help = "The size of engines to create if a pool is used (defaults to S)."
+        default = "S"
+        arg_type = String
+        "--raicode_commit"
+        help = "The commit SHA of a RAICode build to be used when creating pool engines."
+        arg_type = String
         "--profile"
         help = "The .rai/config profile to use when accessing engines and databases (defaults to 'default')."
         arg_type = String

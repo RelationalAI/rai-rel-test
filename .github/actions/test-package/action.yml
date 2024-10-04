@@ -12,6 +12,16 @@ inputs:
     required: false
     default: 1
 
+  engine-size:
+    description: "The size of engines to create in the pool."
+    required: false
+    default: "S"
+
+  raicode-commit:
+    description: "The commit SHA of a RAICode build to be used when creating pool engines."
+    required: false
+    default: ""
+
   changes:
     description: "Files that changed, to computed affected tests."
     required: false
@@ -35,4 +45,9 @@ runs:
         shell: bash
         run: |
           cd $GITHUB_ACTION_PATH/../../../
-          ./rai-rel-test --pool_size ${{ inputs.pool-size }} test_package "${{ inputs.package-directory }}" --changes "${{ inputs.changes }}"
+          ./rai-rel-test \
+            --pool_size ${{ inputs.pool-size }} \
+            --engine_size "${{ inputs.engine-size}}" \
+            --raicode_commit "${{ inputs.raicode-commit }}" \
+            test_package "${{ inputs.package-directory }}" \
+            --changes "${{ inputs.changes }}"
