@@ -18,7 +18,6 @@ cli(args::AbstractString) = cli(split(args))
 Execute the command line interface with these arguments.
 """
 function cli(args::Vector{T}) where {T<:AbstractString}
-
     parsed_args = parse_arguments(args)
     @debug "Parsed arguments" parsed_args
 
