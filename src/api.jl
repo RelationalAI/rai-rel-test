@@ -84,6 +84,9 @@ function test_packages(
                 package = pkg_name(package_dir)
 
                 @info "Running tests for package '$package'..."
+                if !isnothing(changes)
+                    @info "Selecting tests based on these changes: '$changes'"
+                end
                 db = gen_safe_name(something(db_prefix, package))
 
                 # TODO - we may want to move to with_deps = true when pkg is always installed
