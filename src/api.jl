@@ -61,12 +61,12 @@ function test_packages(
     config = or_else(() -> load_config(), config)
 
     if !isnothing(changes) && !isempty(changes) && !has_rel_or_jl_name(changes)
-        @info "Skipping tests because changes do not involve any Rel or Julia files..."
+        progress("test_packages", "Skipping tests because changes do not involve any Rel or Julia files...")
         return
     end
 
     if !isnothing(changes)
-        @info "Selecting tests based on these changes: '$changes'"
+        progress("test_packages", "Selecting tests based on these changes: '$changes'...")
     end
 
     if isnothing(config.engine)
@@ -87,7 +87,7 @@ function test_packages(
                 end
                 package = pkg_name(package_dir)
 
-                @info "Running tests for package '$package'..."
+                progress(package, "Running package tests...")
                 db = gen_safe_name(something(db_prefix, package))
 
                 # TODO - we may want to move to with_deps = true when pkg is always installed
@@ -119,7 +119,7 @@ function test_packages(
         end
     finally
         if isnothing(config.engine)
-            @info "Stopping pool of testing engines..."
+            progress("test_packages", "Stopping pool of testing engines...")
             stop_pool()
         end
     end
@@ -648,12 +648,12 @@ This function will do all the prep work to allow the test to run. It will:
     * if the test file is in a directory with `before-suite.rel`, clone the previous
       database and run it in the clone.
 
-The function will @info the names of the databases created. It will return the last database
+The function will print the names of the databases created. It will return the last database
 created, which can then be used as the `prototype` argument to `run_test`.
 
 """
 function prepare_for_test(test_file::AbstractString, config::Union{Config,Nothing}=nothing)
-    @info "Preparing database(s) to run test in '$test_file'..."
+    progress("prepare_for_test", "Preparing database(s) to run test in '$test_file'...")
 
     package_dir = find_package_dir(test_file)
     isnothing(package_dir) && error("Could not find the package for '$test_file'.")
@@ -664,10 +664,10 @@ function prepare_for_test(test_file::AbstractString, config::Union{Config,Nothin
 
     suite_db = prepare_suite(dirname(test_file), db; config=config)
     if suite_db == db
-        @info "Package and suite prepared in database '$db'."
+        progress("prepare_for_test", "Package and suite prepared in database '$db'.")
         return db
     else
-        @info "Package prepared in database '$db', suite prepared in '$suite_db'."
+        progress("prepare_for_test", "Package prepared in database '$db', suite prepared in '$suite_db'.")
         return suite_db
     end
 end
