@@ -379,23 +379,52 @@ function code_blocks_to_steps(blocks::Vector{CodeBlock})
     for block in blocks
         name = block.basename * (length(blocks) > 1 ? "-$counter" : "")
         step = RAITest.Step(;
-            query=block.code,
+            query = block.code,
             name,
-            readonly=!block.write,
-            allow_unexpected=if block.expect_errors
+            readonly = !block.write,
+            allow_unexpected = if block.expect_errors
                 :errors
             elseif block.expect_warnings
                 :warning
             else
                 :none
             end,
-            expect_abort=block.expect_abort,
+            expect_abort = block.expect_abort,
         )
         push!(steps, step)
         counter += 1
     end
     return steps
 end
+
+
+# Translate from `CodeBlock`s and into `RBF.Action`s.
+function code_blocks_to_rbf_actions(blocks::Vector{CodeBlock})
+    counter = 1
+    actions = RBF.AbstractRelQuery[]
+    for block in blocks
+        name = block.basename * (length(blocks) > 1 ? "-$counter" : "")
+        # RBF should throw an exception on abort or errors if we are not expecting them
+        throw_exception = !block.expect_abort && !block.expect_errors
+        action = if block.write
+            RBF.WriteQuery(
+                name = name,
+                rel = block.code,
+                throw_exception = throw_exception
+            )
+        else
+            RBF.ReadQuery(
+                name,
+                rel=block.code,
+                throw_exception=throw_exception
+            )
+        end
+        push!(actions, action)
+        counter += 1
+    end
+    return actions
+end
+
 
 #
 # Executing transactions
