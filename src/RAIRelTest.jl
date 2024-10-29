@@ -2,6 +2,18 @@ module RAIRelTest
 
 VERSION = "0.1.0"
 
+import RAI
+import RAITest
+import RBF
+using Dates
+using RAITest: RAITestSet
+using Test
+using ReTestItems
+using Random: MersenneTwister
+using UUIDs
+using JSON3
+
+
 include("config.jl")
 include("helpers.jl")
 include("api.jl")
