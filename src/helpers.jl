@@ -254,6 +254,34 @@ function generate_install_package_code(
     return (String(take!(code)), inputs)
 end
 
+"""
+Generate an `RBF.LoadModel` action to install this package.
+"""
+function generate_rbf_load_model(package_dir::AbstractString, rel_package)
+    files = Vector{String}()
+    names = Vector{String}()
+
+    for model in rel_package["models"]
+        !haskey(model, "name") &&
+            error("Invalid 'models' entry: field 'name' is mandatory.")
+        name = model["name"]
+        model_file = joinpath(
+            package_dir,
+            (haskey(model, "file") ? model["file"] : joinpath("model", name * ".rel")),
+        )
+        !isfile(model_file) && error("Cannot find model file $model_file.")
+
+        push!(files, model_file)
+        push!(names, name)
+    end
+
+    return RBF.LoadModel(
+        name = "install_package",
+        model_name = names,
+        rel = files,
+    )
+end
+
 #
 # Managing test scripts
 #

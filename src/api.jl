@@ -595,19 +595,9 @@ function prepare_package_in_rbf(package_dir::AbstractString)
     # load metadata
     rel_package = load_rel_package(package_dir)
 
-    # generate code based on the metadata description of the package
-    code, inputs = generate_install_package_code(package_dir, rel_package)
-
-    actions = [
-        RBF.WriteQuery(
-            name = "install_package",
-            rel = code,
-            # inputs = inputs
-        )
-    ]
-    # potentially run its post-install.rel script
+    # return RBF actions to install the package and run its post-install.rel script
     return vcat(
-        actions,
+        [generate_rbf_load_model(package_dir, rel_package)],
         code_blocks_to_rbf_actions(
             parse_source_file(package_dir, joinpath("test", "post-install.rel"))
         )
