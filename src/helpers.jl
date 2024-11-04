@@ -414,7 +414,7 @@ function execute_transaction(
     readonly=false,
 )
     readtimeout = 1800
-    rsp = RAI.exec(config.context, database, engine, code; inputs, readtimeout)
+    rsp = RAI.exec(config.context, database, engine, code; inputs, readonly, readtimeout)
 
     aborted = rsp.transaction.state == "ABORTED"
     if aborted
