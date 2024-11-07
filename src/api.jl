@@ -522,7 +522,8 @@ end
         config::Union{Config,Nothing}=nothing,
     )
 
-Prepare a `database` to run tests in this `package_dir`.
+Prepare a `database` to run tests in this `package_dir`. Returns the name of the database
+created and prepared.
 
 Create a new database with this name, then install the package sources, and execute the
 `post-install.rel` script for the package, if it exists.
@@ -577,7 +578,7 @@ function prepare_package(
         delete_db(db, config)
         rethrow()
     end
-    return
+    return db
 end
 
 """

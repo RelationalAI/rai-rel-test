@@ -422,10 +422,7 @@ function code_blocks_to_steps(blocks::Vector{CodeBlock})
     counter = 1
     steps = RAITest.Step[]
     for block in blocks
-        name = block.name
-        if isnothing(name)
-            name = block.basename * (length(blocks) > 1 ? "-$counter" : "")
-        end
+        name = (length(blocks) > 1 ? "$counter - " : "") * something(block.name, block.basename)
         step = RAITest.Step(;
             query=block.code,
             name,
