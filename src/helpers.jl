@@ -356,12 +356,10 @@ function parse_code_blocks(
                 m = match(r"load=\"(.*?)\"", line)
                 if !isnothing(m)
                     filename = joinpath(cwd, m.captures[1])
-                    @info "Loading file: '$filename'"
                     if !isfile(filename)
-                        warn(basename, "load directive poinst to a file that was not found: $(filename)")
-                    else
-                        src = read(filename, String)
+                        error("$(basename): 'load' directive poinst to a file that was not found: $(filename)")
                     end
+                    src = read(filename, String)
                 end
             end
             continue
