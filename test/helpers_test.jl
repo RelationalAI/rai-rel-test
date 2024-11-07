@@ -90,3 +90,76 @@ end
         ])) == 1
     end
 end
+
+
+@testitem "code blocks" begin
+    using RAIRelTest
+
+    @testset "parse_code_blocks" begin
+        using RAIRelTest: parse_code_blocks, CodeBlock
+
+        code = """
+// some comments
+// %%
+def output { 1 }
+
+// %% read
+def output { 2 }
+
+// %% write, abort, errors
+
+def output { 3 }
+
+// %% read, warnings, name="foo"
+def output { 4 }
+// %% name="bar", load="query.rel", write
+// %% name="baz", read, write
+def output { 6 }
+"""
+        blocks = parse_code_blocks(".", "my_code", split(code, "\n"))
+
+        @test length(blocks) == 6
+
+        @test blocks[1] == CodeBlock(
+            "my_code", """
+// some comments
+def output { 1 }
+
+""",
+            nothing, false, false, false, false
+        )
+        @test blocks[2] == CodeBlock(
+            "my_code", """
+def output { 2 }
+
+""",
+            nothing, false, false, false, false
+        )
+        @test blocks[3] == CodeBlock(
+            "my_code", """
+
+def output { 3 }
+
+""",
+            nothing, true, false, true, true
+        )
+        @test blocks[4] == CodeBlock(
+            "my_code", """
+def output { 4 }
+""",
+            "foo", false, true, false, false
+        )
+        @test blocks[5] == CodeBlock(
+            "my_code", """
+def output { 5 }
+""",
+            "bar", true, false, false, false
+        )
+        @test blocks[6] == CodeBlock(
+            "my_code", """
+def output { 6 }""",
+            "baz", true, false, false, false
+        )
+
+    end
+end
