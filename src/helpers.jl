@@ -1,12 +1,3 @@
-
-using Random: MersenneTwister
-using UUIDs
-using JSON3
-
-import RAI
-import RAITest
-using Test
-
 #
 # Naming and logging
 #
@@ -254,6 +245,34 @@ function generate_install_package_code(
     return (String(take!(code)), inputs)
 end
 
+"""
+Generate an `RBF.LoadModel` action to install this package.
+"""
+function generate_rbf_load_model(package_dir::AbstractString, rel_package)
+    files = Vector{String}()
+    names = Vector{String}()
+
+    for model in rel_package["models"]
+        !haskey(model, "name") &&
+            error("Invalid 'models' entry: field 'name' is mandatory.")
+        name = model["name"]
+        model_file = joinpath(
+            package_dir,
+            (haskey(model, "file") ? model["file"] : joinpath("model", name * ".rel")),
+        )
+        !isfile(model_file) && error("Cannot find model file $model_file.")
+
+        push!(files, model_file)
+        push!(names, name)
+    end
+
+    return RBF.LoadModel(
+        name = "install_package",
+        model_name = names,
+        rel = files,
+    )
+end
+
 #
 # Managing test scripts
 #
@@ -422,23 +441,52 @@ function code_blocks_to_steps(blocks::Vector{CodeBlock})
     for block in blocks
         name = (length(blocks) > 1 ? "$counter - " : "") * something(block.name, block.basename)
         step = RAITest.Step(;
-            query=block.code,
+            query = block.code,
             name,
-            readonly=!block.write,
-            allow_unexpected=if block.expect_errors
+            readonly = !block.write,
+            allow_unexpected = if block.expect_errors
                 :errors
             elseif block.expect_warnings
                 :warning
             else
                 :none
             end,
-            expect_abort=block.expect_abort,
+            expect_abort = block.expect_abort,
         )
         push!(steps, step)
         counter += 1
     end
     return steps
 end
+
+
+# Translate from `CodeBlock`s and into `RBF.Action`s.
+function code_blocks_to_rbf_actions(blocks::Vector{CodeBlock})
+    counter = 1
+    actions = RBF.AbstractRelQuery[]
+    for block in blocks
+        name = block.basename * (length(blocks) > 1 ? "-$counter" : "")
+        # RBF should throw an exception on abort or errors if we are not expecting them
+        throw_exception = !block.expect_abort && !block.expect_errors
+        action = if block.write
+            RBF.WriteQuery(
+                name = name,
+                rel = block.code,
+                throw_exception = throw_exception
+            )
+        else
+            RBF.ReadQuery(
+                name,
+                rel=block.code,
+                throw_exception=throw_exception
+            )
+        end
+        push!(actions, action)
+        counter += 1
+    end
+    return actions
+end
+
 
 #
 # Executing transactions

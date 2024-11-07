@@ -1,11 +1,3 @@
-
-import RAI
-import RAITest
-using Dates
-using RAITest: RAITestSet
-using Test
-using ReTestItems
-
 """
     test_packages(
         package_dirs::Vector{T},
@@ -65,7 +57,7 @@ function test_packages(
         return
     end
 
-    if !isnothing(changes)
+    if !isnothing(changes) && !isempty(changes)
         progress("test_packages", "Selecting tests based on these changes: $changes...")
     end
 
@@ -582,6 +574,29 @@ function prepare_package(
 end
 
 """
+    prepare_package_in_rbf(package_dir::AbstractString)
+
+Prepare a package to be installed by RBF, the Relational AI benchmarking framework. Returns
+a Vector{RBF.AbstractAction} that can be sent to RBF in a workload.
+
+This function takes a package directory and generates the RBF actions to prepare the package
+in a database. The actions include installing the packag and, if the package declares a
+post-install.rel script, actions equivalent to the transactions in that script.
+"""
+function prepare_package_in_rbf(package_dir::AbstractString)
+    # load metadata
+    rel_package = load_rel_package(package_dir)
+
+    # return RBF actions to install the package and run its post-install.rel script
+    return vcat(
+        [generate_rbf_load_model(package_dir, rel_package)],
+        code_blocks_to_rbf_actions(
+            parse_source_file(package_dir, joinpath("test", "post-install.rel"))
+        )
+    )
+end
+
+"""
     prepare_suite(
         suite_dir::AbstractString,
         prototype::AbstractString,
@@ -672,6 +687,7 @@ function prepare_for_test(test_file::AbstractString, config::Union{Config,Nothin
         return suite_db
     end
 end
+
 
 """
     run_script(
