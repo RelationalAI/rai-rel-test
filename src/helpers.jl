@@ -263,8 +263,11 @@ A code block is a section of a file that represents code to execute as a standal
 transaction, and includes expectations regarding the results.
 """
 struct CodeBlock
+    # if name is not set, generate a step name by appending a counter to the basename
     basename::String
     code::String
+    # explicitly set name for the block
+    name::Union{String,Nothing}
     write::Bool
     expect_warnings::Bool
     expect_errors::Bool
@@ -289,24 +292,48 @@ end
 Translate a file of Rel queries into a series of code blocks suitable for direct execution.
 """
 function parse_code_blocks(source_file::AbstractString)
-    blocks = CodeBlock[]
     if !isfile(source_file)
-        return blocks
+        return CodeBlock[]
     end
 
-    name = (unix_basename(source_file))[1:end-4]
-    lines = readlines(source_file)
+    basename = (unix_basename(source_file))[1:end-4]
+    code = readlines(source_file)
+
+    return parse_code_blocks(dirname(source_file), basename, code)
+end
+
+"""
+    parse_code_blocks(
+        cwd::AbstractString,
+        basename::AbstractString,
+        code::Vector{T}
+    ) where T <:AbstractString
+
+Translate a string vector of Rel queries into a series of code blocks suitable for direct
+execution. The basename parameter indicates the basename to use for the blocks, and the cwd
+parameter represents the current working directory from where to load files if there are any
+load directives.
+"""
+function parse_code_blocks(
+        cwd::AbstractString,
+        basename::AbstractString,
+        code::Vector{T}
+    ) where T <:AbstractString
+
+    blocks = CodeBlock[]
     src = ""
     write = false
     expect_warnings = false
     expect_errors = false
     expect_abort = false
-    for line in lines
+    name = nothing
+    for line in code
         if startswith(line, "// %%")
             if !isempty(src) && !all_comments(src)
                 block = CodeBlock(
-                    name,
+                    basename,
                     src,
+                    name,
                     write,
                     expect_warnings,
                     expect_errors,
@@ -320,6 +347,23 @@ function parse_code_blocks(source_file::AbstractString)
             expect_warnings = contains(line, "warnings")
             expect_errors = contains(line, "errors")
             expect_abort = contains(line, "abort")
+            if contains(line, "name")
+                name = match(r"name=\"(.*?)\"", line).captures[1]
+            else
+                name = nothing
+            end
+            if contains(line, "load")
+                m = match(r"load=\"(.*?)\"", line)
+                if !isnothing(m)
+                    filename = joinpath(cwd, m.captures[1])
+                    @info "Loading file: '$filename'"
+                    if !isfile(filename)
+                        warn(basename, "load directive poinst to a file that was not found: $(filename)")
+                    else
+                        src = read(filename, String)
+                    end
+                end
+            end
             continue
         end
         src *= line
@@ -328,8 +372,9 @@ function parse_code_blocks(source_file::AbstractString)
     src = strip(src)
     if !isempty(src) && !all_comments(src)
         block = CodeBlock(
-            name,
+            basename,
             string(src),
+            name,
             write,
             expect_warnings,
             expect_errors,
@@ -377,7 +422,10 @@ function code_blocks_to_steps(blocks::Vector{CodeBlock})
     counter = 1
     steps = RAITest.Step[]
     for block in blocks
-        name = block.basename * (length(blocks) > 1 ? "-$counter" : "")
+        name = block.name
+        if isnothing(name)
+            name = block.basename * (length(blocks) > 1 ? "-$counter" : "")
+        end
         step = RAITest.Step(;
             query=block.code,
             name,
