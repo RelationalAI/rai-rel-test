@@ -109,6 +109,7 @@ function test_packages(
                                 db,
                                 config=config,
                                 skip_prepare=true,
+                                changes=changes
                             )
                     end
                 finally
@@ -189,7 +190,8 @@ end
         database::Union{AbstractString,Nothing}=nothing;
         config::Union{Config,Nothing}=nothing,
         skip_prepare::Bool=false,
-    )
+        changes::Union{Vector{T},Nothing}=nothing,
+    ) where {T<:AbstractString}
 
 Run all the julia ReTestItems-based tests in this package_dir.
 
@@ -205,7 +207,8 @@ function run_package_testitems(
     database::Union{AbstractString,Nothing}=nothing;
     config::Union{Config,Nothing}=nothing,
     skip_prepare::Bool=false,
-)
+    changes::Union{Vector{T},Nothing}=nothing,
+) where {T<:AbstractString}
     package = pkg_name(package_dir)
 
     db = something(database, gen_safe_name(package))
@@ -217,7 +220,7 @@ function run_package_testitems(
 
     try
         @testset verbose = true "$package Julia tests" begin
-            run_testitems(joinpath(package_dir, "test"), db, config=config)
+            run_testitems(package_dir, db, config=config, changes=changes)
         end
     finally
         # cleanup the db created by prepare_package
@@ -228,22 +231,25 @@ end
 
 """
     run_testitems(
-        path::AbstractString,
+        package_dir::AbstractString,
         database::AbstractString;
         name::Union{AbstractString,Nothing}=nothing,
         config::Union{Config,Nothing}=nothing,
-    )
+        changes::Union{Vector{T},Nothing}=nothing,
+    ) where {T<:AbstractString}
 
-Run the julia ReTestItems-based tests in this path.
+
+Run the julia ReTestItems-based tests in this package_dir.
 
 The `database` must already be prepared and ready to run the tests.
 """
 function run_testitems(
-    path::AbstractString,
+    package_dir::AbstractString,
     database::AbstractString;
     name::Union{AbstractString,Nothing}=nothing,
     config::Union{Config,Nothing}=nothing,
-)
+    changes::Union{Vector{T},Nothing}=nothing,
+) where {T<:AbstractString}
 
     # load default if needed
     config = or_else(() -> load_config(), config)
@@ -253,8 +259,40 @@ function run_testitems(
     RAITest.set_clone_db!(database)
     !isnothing(config.engine) && RAITest.set_test_engine!(config.engine)
 
+    package = pkg_name(package_dir)
+    selectors = compute_test_selectors(changes)
     try
-        ReTestItems.runtests(path; name=name)
+        if isempty(selectors)
+            # no selectors, run all tests
+            ReTestItems.runtests(joinpath(package_dir, "test"); name=name)
+        else
+            paths = Vector{String}()
+            for selector in selectors
+                if isempty(selector.tests)
+                    suitepath = joinpath("test/", selector.suite)
+                    if isdir(suitepath)
+                        # if the suite resolves to a directory, run all tests in it
+                        push!(paths, suitepath)
+                    else
+                        # otherwise, look for a file with the suite name and the julia test
+                        # suite convention, using underscores and the _tests.jl suffix.
+                        suitefile = joinpath("test/", replace(selector.suite, "-" => "_")) * "_tests.jl"
+                        if isfile(suitefile)
+                            push!(paths, suitefile)
+                        else
+                            warn(package, "Could not find test suite for selector: $selector")
+                        end
+                    end
+                else
+                    # only run the specific tests selected by the selector
+                    for test in selector.tests
+                        push!(paths, joinpath(joinpath("test/", selector.suite), test))
+                    end
+                end
+            end
+            progress(package, "Running tests in the following paths: $paths")
+            ReTestItems.runtests(paths...; name=name)
+        end
     finally
         RAITest.set_clone_db!(nothing)
         RAITest.set_test_engine!(nothing)
@@ -301,16 +339,16 @@ function run_package_suites(
     package = pkg_name(package_dir)
     progress(package, "Running Rel package tests...")
 
-    filter = isnothing(changes) ? nothing : make_diff_filter(get_diff_filters(changes))
-    suites = find_test_dirs(package_dir, filter=filter)
+    selectors = compute_test_selectors(changes)
+    suites = find_test_dirs(package_dir; selectors=selectors)
 
     if isempty(suites)
-        progress(package, "No Rel test suites found under '$package' directory.")
+        progress(package, "No Rel test suites found under '$(package)' directory.")
         return
-    elseif isnothing(filter)
-        progress(package, "Found $(length(suites)) suites: $suites")
+    elseif isempty(selectors)
+        progress(package, "Found $(length(suites)) suite(s): $(suites)")
     else
-        progress(package, "Found $(length(suites)) suites matching the changes: $suites")
+        progress(package, "Found $(length(suites)) suite(s) matching the changes: $(suites)")
     end
 
     db = something(database, gen_safe_name(package))
@@ -326,7 +364,7 @@ function run_package_suites(
             cache = Dict{String,Vector{RAITest.Step}}()
 
             for suite in suites
-                run_suite(suite, db; config=config)
+                run_suite(suite, db; config=config, selectors=selectors)
             end
         end
     finally
@@ -342,6 +380,8 @@ end
         prototype::AbstractString,
         database::AbstractString;
         config::Union{Config,Nothing}=nothing,
+        skip_prepare::Bool=false,
+        selectors::Union{Set{TestSelector},Nothing}=nothing,
     )
 
 Run all tests found in this suite_dir.
@@ -360,6 +400,11 @@ prototype.
 If `skip_prepare` is not set, the `database` is created, but only the suite has a
 `before-suite.rel` file, otherwise the `prototype` database will be used as a prototype
 for tests.
+
+The `selectors` parameter is a set of `TestSelector` objects that represent the changes in the
+package that affect the suite. If it is nothing, then all tests in the suite are executed.
+But if it contains selectors, then only the tests that are affected by the changes are
+executed.
 """
 function run_suite(
     suite_dir::AbstractString,
@@ -367,13 +412,14 @@ function run_suite(
     database::Union{AbstractString,Nothing}=nothing;
     config::Union{Config,Nothing}=nothing,
     skip_prepare::Bool=false,
+    selectors::Union{Set{TestSelector},Nothing}=nothing,
 )
     if skip_prepare && !isnothing(database)
         @warn("Ignoring `database` as it is incompatible with `skip_prepare`.")
     end
 
     suite = suite_name(suite_dir)
-    test_files = find_test_files(suite_dir)
+    test_files = find_test_files(suite_dir; selectors=selectors)
     if isempty(test_files)
         progress(suite, "No test files found under folder '$suite_dir'.")
         return

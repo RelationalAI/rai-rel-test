@@ -6,6 +6,7 @@ using JSON3
 import RAI
 import RAITest
 using Test
+using AutoHashEquals: @auto_hash_equals
 
 #
 # Naming and logging
@@ -212,14 +213,14 @@ function generate_install_package_code(
             package_dir,
             (haskey(model, "file") ? model["file"] : joinpath("model", name * ".rel")),
         )
-        !isfile(model_file) && error("Cannot find model file $model_file.")
+        !isfile(model_file) && error("Cannot find model file '$(model_file)'.")
 
         inputs[input] = read(model_file, String)
         print(
             code,
             """
-    def insert[:rel, :catalog, :model] {("$name", $(input))}
-    def delete[:rel, :catalog, :model] {("$name", ::rel[:catalog, :model, "$name"])}
+    def insert[:rel, :catalog, :model]: ("$(name)", $(input))
+    def delete[:rel, :catalog, :model]: ("$(name)", ::rel[:catalog, :model, "$(name)"])
 """,
         )
     end
@@ -537,7 +538,6 @@ function execute_block(
         state = rsp.transaction.state
         # TODO - this will need updating when the deprecation turns into removal
         problems = rsp.problems
-        @info ctx "Executed script" state source problems
     end
     if !block.expect_abort && aborted
         for row in rsp.results
@@ -605,12 +605,29 @@ end
 #
 
 """
+Defines which tests should be selected to run.
+
+If `tests` is empty, then any test in the directory of the suite name will be executed.
+Otherwise, only tests in this `suite` and with a name in `tests` will be executed.
+"""
+@auto_hash_equals struct TestSelector
+    suite::AbstractString
+    tests::Vector{AbstractString}
+end
+
+# convenience constructor for a suite with no tests
+function TestSelector(suite::AbstractString)
+    return TestSelector(suite, [])
+end
+
+
+"""
 Find all directories under `base_dirs` that have Rel test suites.
 """
-function find_test_dirs(base_dirs::Vector{T}; filter::Union{Function,Nothing}=nothing) where {T<:AbstractString}
+function find_test_dirs(base_dirs::Vector{T}; selectors::Set{TestSelector}=Set{TestSelector}()) where {T<:AbstractString}
     test_dirs = Set{String}()
     for base_dir in base_dirs
-        union!(test_dirs, find_test_dirs(base_dir, filter=filter))
+        union!(test_dirs, find_test_dirs(base_dir, selectors=selectors))
     end
     return sort!([test_dirs...])
 end
@@ -618,7 +635,7 @@ end
 """
 Find all directories under `base_dir` that have Rel test suites.
 """
-function find_test_dirs(base_dir::AbstractString="."; filter::Union{Function,Nothing}=nothing)
+function find_test_dirs(base_dir::AbstractString="."; selectors::Set{TestSelector}=Set{TestSelector}())
     isfile(base_dir) && return find_test_dirs(dirname(base_dir))
     test_dirs = Set{String}()
     for (root, _, files) in walkdir(base_dir)
@@ -629,41 +646,87 @@ function find_test_dirs(base_dir::AbstractString="."; filter::Union{Function,Not
         end
     end
 
-    !isnothing(filter) && filter!(filter, test_dirs)
+    !isempty(selectors) && filter!(make_dir_filter(selectors), test_dirs)
 
     return sort!([test_dirs...])
 end
 
 """
-Given a list of changed files (e.g. from a diff between git branches), return a set of
-filters (namespace names) that can be used to filter test_dirs to return only suites
-affected by those file changes.
+Given a set of selectors, return a function that, given a directory name, checks whether the
+directory matches at least one of the selectors' test suite.
+"""
+function make_dir_filter(selectors::Set{TestSelector})
+    return (dirname ->
+        isempty(selectors) ||
+        any(filter -> endswith(dirname, filter.suite), selectors)
+    )
+end
+
+"""
+Given a set of selectors, return a function that, given a filename (just the basename,
+without the directory), checks whether the test file should be executed.
+"""
+function make_file_filter(selectors::Set{TestSelector})
+    return (filename ->
+        isempty(selectors) ||
+        any(selector ->
+            isempty(selector.tests) ||
+            any(test -> filename == test, selector.tests),
+        selectors)
+    )
+end
+
+"""
+Given a list of changed paths (e.g. from a diff between git branches), return a set of
+TestSelectors that can be used to filter test directories and files to return only suites
+and tests affected by those changes.
 
 This is useful, for example, to run only the test suites that were impacted by a PR, instead
 of having to run them all.
 """
-function get_diff_filters(changes::Vector{T}) where {T<:AbstractString}
-    filters = Set{String}()
-    for match in changes
-        # model/std/common.rel -> std/common
-        if startswith(match, "model/") && endswith(match, ".rel")
-            push!(filters, match[7:end-4])
+function compute_test_selectors(changed_paths::Union{Vector{T},Nothing}) where {T<:AbstractString}
+    isnothing(changed_paths) && return Set{TestSelector}()
+
+    # suite -> [tests]
+    dict = Dict{AbstractString,Vector{AbstractString}}()
+    for path in changed_paths
+        # if one of these files changed, all tests must be executed, so return the empty filter
+        if endswith(path, "test/post-install.rel") || endswith(path, "test/before-package.rel")
+            return Set{TestSelector}()
         end
-        # test/std/common/test-foo.rel -> std/common
-        if startswith(match, "test/") && endswith(match, ".rel") && occursin("test-", match)
-            push!(filters, match[6:findlast('/', match)-1])
+
+        # model/std/common.rel -> run the whole std/common suite
+        if startswith(path, "model/") && endswith(path, ".rel")
+            # note: this will overwrite finer grained selectors for tests in the suite
+            dict[path[7:end-4]] = []
+        elseif startswith(path, "test/")
+            # if a test is modified, run only that test
+            key = path[6:findlast('/', path)-1]
+            # test/std/common/test-foo.rel || test/std/common/foo_test.jl
+            if (endswith(path, ".rel") && occursin("test-", path)) || endswith(path, "_tests.jl")
+                if !haskey(dict, key)
+                    # create entry for this suite, targetting only this test
+                    dict[key] = [unix_basename(path)]
+                elseif !isempty(dict[key])
+                    # if there are already tests in the suite, add this one
+                    push!(dict[key], unix_basename(path))
+                else
+                    # suite is already in registered fully, no need to add this test
+                end
+            elseif endswith(path, ".rel")
+                # some other rel file (like before-suite.rel), run the whole suite
+                dict[key] = []
+            end
         end
     end
-    return filters
+    # transform from dict to a set of TestSelectors
+    selectors = Set{TestSelector}()
+    for (suite, tests) in dict
+        push!(selectors, TestSelector(suite, tests))
+    end
+    return selectors
 end
 
-"""
-Given a set of filters returned by get_diff_filters, return a function that, given a name,
-will check if the name occurs in any of those filters.
-"""
-function make_diff_filter(filters::Set{String})
-    return (test_dir -> isempty(filters) || any(filter -> occursin(filter, test_dir), filters))
-end
 
 # Find the nearest directory containing test-*.rel files
 # Search dirname(path) if no tests are found
@@ -697,8 +760,12 @@ end
 """
 Find all files in this `directory` that are Rel test files.
 """
-function find_test_files(directory::AbstractString)
-    return filter(x -> startswith(x, "test-") && endswith(x, ".rel"), readdir(directory))
+function find_test_files(directory::AbstractString; selectors::Set{TestSelector}=Set{TestSelector}())
+    filter_function = make_file_filter(selectors)
+    return filter(x ->
+        startswith(x, "test-") && endswith(x, ".rel") && filter_function(x),
+        readdir(directory)
+    )
 end
 
 """
