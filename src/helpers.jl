@@ -219,8 +219,8 @@ function generate_install_package_code(
         print(
             code,
             """
-    def insert[:rel, :catalog, :model] {("$(name)", $(input))}
-    def delete[:rel, :catalog, :model] {("$(name)", ::rel[:catalog, :model, "$(name)"])}
+    def insert[:rel, :catalog, :model]: ("$(name)", $(input))
+    def delete[:rel, :catalog, :model]: ("$(name)", ::rel[:catalog, :model, "$(name)"])
 """,
         )
     end
