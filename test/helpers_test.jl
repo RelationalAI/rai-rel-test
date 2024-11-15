@@ -73,23 +73,62 @@ end
 @testitem "test finding" begin
     using RAIRelTest
 
-    @testset "get_diff_filters" begin
-        using RAIRelTest: get_diff_filters
+    @testset "compute_test_selectors" begin
+        using RAIRelTest: TestSelector, compute_test_selectors
 
-        @test get_diff_filters(["model/std/common.rel"]) == Set(["std/common"])
-        @test get_diff_filters(["test/before-package.rel"]) == Set([])
-        @test get_diff_filters(["test/std/common/test-jaro_distance.rel"]) == Set(["std/common"])
-        @test get_diff_filters(["test/std/common/test-jaro_winkler_distance.rel"]) == Set(["std/common"])
+        # changes that force running the whole suite
+        @test compute_test_selectors(["test/post-install.rel"]) == Set()
+        @test compute_test_selectors(["test/before-package.rel"]) == Set()
 
-        # returned value is a set, so it removes duplicates
-        @test length(get_diff_filters([
-            "model/std/common.rel",
-            "test/before-package.rel",
+        # changes to model cause the whole suite to run
+        @test compute_test_selectors(["model/std/common.rel"]) == Set([TestSelector("std/common")])
+
+        # changes to tests cause only those tests to run
+        @test compute_test_selectors(["test/std/common/test-jaro_distance.rel"]) ==
+            Set([TestSelector("std/common", ["test-jaro_distance.rel"])])
+        @test compute_test_selectors(["test/std/common/test-jaro_winkler_distance.rel"]) ==
+            Set([TestSelector("std/common", ["test-jaro_winkler_distance.rel"])])
+
+        # mix of model and test changes
+        @test compute_test_selectors([
+            "model/std/pkg.rel",
             "test/std/common/test-jaro_distance.rel",
             "test/std/common/test-jaro_winkler_distance.rel"
-        ])) == 1
+        ]) == Set([
+            TestSelector("std/pkg"),
+            TestSelector("std/common",
+                ["test-jaro_distance.rel", "test-jaro_winkler_distance.rel"])
+        ])
+
+        # change to model subsumes the individual tests
+        @test compute_test_selectors([
+            "model/std/common.rel",
+            "test/std/common/test-jaro_distance.rel",
+            "test/std/common/test-jaro_winkler_distance.rel"
+        ]) == Set([TestSelector("std/common")])
+
+        # mix of model and test changes with subsumption
+        @test compute_test_selectors([
+            "model/std/pkg.rel",
+            "model/std/common.rel",
+            "test/std/common/test-jaro_distance.rel",
+            "test/std/common/test-jaro_winkler_distance.rel"
+        ]) == Set([
+            TestSelector("std/pkg"),
+            TestSelector("std/common")
+        ])
+
+        # changes to multiple models
+        @test compute_test_selectors([
+            "model/graphlib-basics.rel",
+            "model/graphlib-centrality.rel",
+        ]) == Set([
+            TestSelector("graphlib-basics")
+            TestSelector("graphlib-centrality")
+        ])
     end
 end
+
 
 
 @testitem "code blocks" begin
