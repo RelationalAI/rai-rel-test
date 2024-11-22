@@ -1,7 +1,7 @@
 name = "RAIRelTest"
 uuid = "e61cca87-0504-4c6f-968f-8447d812e169"
 authors = ["Thiago Tonelli Bartolomei <thiago.tonelli@relational.ai>"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
