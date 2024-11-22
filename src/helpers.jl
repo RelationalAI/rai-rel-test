@@ -705,7 +705,7 @@ function compute_test_selectors(changed_paths::Union{Vector{T},Nothing}) where {
             # test/std/common/test-foo.rel || test/std/common/foo_test.jl
             if (endswith(path, ".rel") && occursin("test-", path)) || endswith(path, "_tests.jl")
                 if !haskey(dict, key)
-                    # create entry for this suite, targetting only this test
+                    # create entry for this suite, targeting only this test
                     dict[key] = [unix_basename(path)]
                 elseif !isempty(dict[key])
                     # if there are already tests in the suite, add this one

@@ -261,22 +261,23 @@ function run_testitems(
 
     package = pkg_name(package_dir)
     selectors = compute_test_selectors(changes)
+    test_dir = joinpath(package_dir, "test")
     try
         if isempty(selectors)
             # no selectors, run all tests
-            ReTestItems.runtests(joinpath(package_dir, "test"); name=name)
+            ReTestItems.runtests(test_dir; name=name)
         else
             paths = Vector{String}()
             for selector in selectors
                 if isempty(selector.tests)
-                    suitepath = joinpath("test/", selector.suite)
+                    suitepath = joinpath(test_dir, selector.suite)
                     if isdir(suitepath)
                         # if the suite resolves to a directory, run all tests in it
                         push!(paths, suitepath)
                     else
                         # otherwise, look for a file with the suite name and the julia test
                         # suite convention, using underscores and the _tests.jl suffix.
-                        suitefile = joinpath("test/", replace(selector.suite, "-" => "_")) * "_tests.jl"
+                        suitefile = joinpath(test_dir, replace(selector.suite, "-" => "_")) * "_tests.jl"
                         if isfile(suitefile)
                             push!(paths, suitefile)
                         else
@@ -286,12 +287,16 @@ function run_testitems(
                 else
                     # only run the specific tests selected by the selector
                     for test in selector.tests
-                        push!(paths, joinpath(joinpath("test/", selector.suite), test))
+                        push!(paths, joinpath(joinpath(test_dir, selector.suite), test))
                     end
                 end
             end
-            progress(package, "Running tests in the following paths: $paths")
-            ReTestItems.runtests(paths...; name=name)
+            if isempty(paths)
+                progress(package, "No Julia tests found for selectors: $selectors")
+            else
+                progress(package, "Running Julia tests in the following paths: $paths")
+                ReTestItems.runtests(paths...; name=name)
+            end
         end
     finally
         RAITest.set_clone_db!(nothing)
