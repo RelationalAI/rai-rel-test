@@ -555,9 +555,9 @@ function execute_block(
         end
     end
     @test block.expect_abort == aborted broken=block.broken
-    if !block.expect_errors && !block.broken
+    if !block.expect_errors
         # This will need updating when the deprecation turns into removal
-        @test block.expect_errors == errored
+        @test block.expect_errors == errored broken=block.broken
     end
     return block.broken || !((!block.expect_errors && errored) || (!block.expect_abort && aborted))
 end
