@@ -154,10 +154,13 @@ def output { 4 }
 // %% name="bar", load="query.rel", write
 // %% name="baz", read, write
 def output { 6 }
+
+// %% name="buzz", @broken
+ic () requires not empty({"Oops"})
 """
         blocks = parse_code_blocks(@__DIR__, "my_code", split(code, "\n"))
 
-        @test length(blocks) == 6
+        @test length(blocks) == 7
 
         @test blocks[1] == CodeBlock(
             "my_code", """
@@ -165,14 +168,14 @@ def output { 6 }
 def output { 1 }
 
 """,
-            nothing, false, false, false, false
+            nothing, false, false, false, false, false
         )
         @test blocks[2] == CodeBlock(
             "my_code", """
 def output { 2 }
 
 """,
-            nothing, false, false, false, false
+            nothing, false, false, false, false, false
         )
         @test blocks[3] == CodeBlock(
             "my_code", """
@@ -180,25 +183,31 @@ def output { 2 }
 def output { 3 }
 
 """,
-            nothing, true, false, true, true
+            nothing, true, false, true, true, false
         )
         @test blocks[4] == CodeBlock(
             "my_code", """
 def output { 4 }
 """,
-            "foo", false, true, false, false
+            "foo", false, true, false, false, false
         )
         @test blocks[5] == CodeBlock(
             "my_code", """
 def output { 5 }
 """,
-            "bar", true, false, false, false
+            "bar", true, false, false, false, false
         )
         @test blocks[6] == CodeBlock(
             "my_code", """
-def output { 6 }""",
-            "baz", true, false, false, false
-        )
+def output { 6 }
 
+""",
+            "baz", true, false, false, false, false
+        )
+        @test blocks[7] == CodeBlock(
+            "my_code", """
+ic () requires not empty({"Oops"})""",
+            "buzz", false, false, false, false, true
+        )
     end
 end

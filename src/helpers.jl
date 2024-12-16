@@ -273,6 +273,7 @@ struct CodeBlock
     expect_warnings::Bool
     expect_errors::Bool
     expect_abort::Bool
+    broken::Bool
 end
 
 """
@@ -327,6 +328,7 @@ function parse_code_blocks(
     expect_warnings = false
     expect_errors = false
     expect_abort = false
+    broken = false
     name = nothing
     for line in code
         if startswith(line, "// %%")
@@ -339,6 +341,7 @@ function parse_code_blocks(
                     expect_warnings,
                     expect_errors,
                     expect_abort,
+                    broken,
                 )
                 push!(blocks, block)
                 src = ""
@@ -348,6 +351,7 @@ function parse_code_blocks(
             expect_warnings = contains(line, "warnings")
             expect_errors = contains(line, "errors")
             expect_abort = contains(line, "abort")
+            broken = contains(line, "@broken")
             if contains(line, "name")
                 name = match(r"name=\"(.*?)\"", line).captures[1]
             else
@@ -378,6 +382,7 @@ function parse_code_blocks(
             expect_warnings,
             expect_errors,
             expect_abort,
+            broken,
         )
         push!(blocks, block)
     end
@@ -434,6 +439,7 @@ function code_blocks_to_steps(blocks::Vector{CodeBlock})
                 :none
             end,
             expect_abort=block.expect_abort,
+            broken=block.broken,
         )
         push!(steps, step)
         counter += 1
@@ -548,12 +554,12 @@ function execute_block(
             end
         end
     end
-    @test block.expect_abort == aborted
-    if !block.expect_errors
+    @test block.expect_abort == aborted broken=block.broken
+    if !block.expect_errors && !block.broken
         # This will need updating when the deprecation turns into removal
         @test block.expect_errors == errored
     end
-    return !((!block.expect_errors && errored) || (!block.expect_abort && aborted))
+    return block.broken || !((!block.expect_errors && errored) || (!block.expect_abort && aborted))
 end
 
 #
