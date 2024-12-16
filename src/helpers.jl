@@ -362,7 +362,7 @@ function parse_code_blocks(
                 if !isnothing(m)
                     filename = joinpath(cwd, m.captures[1])
                     if !isfile(filename)
-                        error("$(basename): 'load' directive poinst to a file that was not found: $(filename)")
+                        error("$(basename): 'load' directive points to a file that was not found: $(filename)")
                     end
                     src = read(filename, String)
                 end
