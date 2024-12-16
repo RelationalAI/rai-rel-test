@@ -351,7 +351,7 @@ function parse_code_blocks(
             expect_warnings = contains(line, "warnings")
             expect_errors = contains(line, "errors")
             expect_abort = contains(line, "abort")
-            broken = contains(line, "@broken")
+            broken = contains(line, "broken")
             if contains(line, "name")
                 name = match(r"name=\"(.*?)\"", line).captures[1]
             else

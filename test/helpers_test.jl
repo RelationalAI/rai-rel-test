@@ -155,7 +155,7 @@ def output { 4 }
 // %% name="baz", read, write
 def output { 6 }
 
-// %% name="buzz", @broken
+// %% name="buzz", broken
 ic () requires not empty({"Oops"})
 """
         blocks = parse_code_blocks(@__DIR__, "my_code", split(code, "\n"))
