@@ -151,7 +151,7 @@ def output { 3 }
 
 // %% read, warnings, name="foo"
 def output { 4 }
-// %% name="bar", load="query.rel", write
+// %% name="bar", load="$(@__DIR__)/query.rel", write
 // %% name="baz", read, write
 def output { 6 }
 """
