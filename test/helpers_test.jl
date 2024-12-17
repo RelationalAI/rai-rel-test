@@ -155,7 +155,7 @@ def output { 4 }
 // %% name="baz", read, write
 def output { 6 }
 """
-        blocks = parse_code_blocks(".", "my_code", split(code, "\n"))
+        blocks = parse_code_blocks(@__DIR__, "my_code", split(code, "\n"))
 
         @test length(blocks) == 6
 

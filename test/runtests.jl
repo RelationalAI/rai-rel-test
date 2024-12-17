@@ -1,3 +1,5 @@
 using Test, ReTestItems, RAIRelTest
 
-include("helpers_test.jl")
+@testset begin
+    include("helpers_test.jl")
+end
