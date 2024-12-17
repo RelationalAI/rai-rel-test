@@ -1,3 +1,3 @@
 using Test, ReTestItems, RAIRelTest
 
-include("helpers_test.jl")
+runtests("$(@__DIR__)/helpers_test.jl")
