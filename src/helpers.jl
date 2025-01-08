@@ -356,11 +356,11 @@ function parse_code_blocks(
         # Reset flags
         if contains(line, "name")
           name = match(r"name=\"(.*?)\"", line).captures[1]
+          # Remove `name` from line to avoid conflict with other keywords.
+          line = replace(line, r"name=\"(.*?)\"" => "")
         else
             name = nothing
         end
-        # Remove `name` from line to avoid conflict with other keywords.
-        line = replace(line, r"name=\"(.*?)\"" => "")
 
         if contains(line, "load")
             m = match(r"load=\"(.*?)\"", line)
@@ -370,10 +370,11 @@ function parse_code_blocks(
                     error("$(basename): 'load' directive points to a file that was not found: $(filename)")
                 end
                 src = read(filename, String)
+
+                # Remove `load` for same reason.
+                line = replace(line, r"load=\"(.*?)\"" => "")
             end
         end
-        # Remove `load` for same reason.
-        line = replace(line, r"load=\"(.*?)\"" => "")
 
         write = contains(line, "write")
         expect_warnings = contains(line, "warnings")
