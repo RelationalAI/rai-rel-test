@@ -331,52 +331,63 @@ function parse_code_blocks(
     broken = false
     name = nothing
     for line in code
-        if startswith(line, "// %%")
-            if !isempty(src) && !all_comments(src)
-                block = CodeBlock(
-                    basename,
-                    src,
-                    name,
-                    write,
-                    expect_warnings,
-                    expect_errors,
-                    expect_abort,
-                    broken,
-                )
-                push!(blocks, block)
-                src = ""
-            end
-            # reset flags
-            write = contains(line, "write")
-            expect_warnings = contains(line, "warnings")
-            expect_errors = contains(line, "errors")
-            expect_abort = contains(line, "abort")
-            broken = contains(line, "broken")
-            if contains(line, "name")
-                name = match(r"name=\"(.*?)\"", line).captures[1]
-            else
-                name = nothing
-            end
-            if contains(line, "load")
-                m = match(r"load=\"(.*?)\"", line)
-                if !isnothing(m)
-                    filename = joinpath(cwd, m.captures[1])
-                    if !isfile(filename)
-                        error("$(basename): 'load' directive points to a file that was not found: $(filename)")
-                    end
-                    src = read(filename, String)
-                end
-            end
-            continue
+        if !startswith(line, "// %%")
+          src *= line
+          src *= "\n"
+          continue
         end
-        src *= line
-        src *= "\n"
+
+        # Store the current CodeBlock
+        if !isempty(src) && !all_comments(src)
+            block = CodeBlock(
+                basename,
+                strip(src),
+                name,
+                write,
+                expect_warnings,
+                expect_errors,
+                expect_abort,
+                broken,
+            )
+            push!(blocks, block)
+            src = ""
+        end
+
+        # Reset flags
+        if contains(line, "name")
+          name = match(r"name=\"(.*?)\"", line).captures[1]
+          # Remove `name` from line to avoid conflict with other keywords.
+          line = replace(line, r"name=\"(.*?)\"" => "")
+        else
+            name = nothing
+        end
+
+        if contains(line, "load")
+            m = match(r"load=\"(.*?)\"", line)
+            if !isnothing(m)
+                filename = joinpath(cwd, m.captures[1])
+                if !isfile(filename)
+                    error("$(basename): 'load' directive points to a file that was not found: $(filename)")
+                end
+                src = read(filename, String)
+
+                # Remove `load` for same reason.
+                line = replace(line, r"load=\"(.*?)\"" => "")
+            end
+        end
+
+        write = contains(line, "write")
+        expect_warnings = contains(line, "warnings")
+        expect_errors = contains(line, "errors")
+        expect_abort = contains(line, "abort")
+        broken = contains(line, "broken")
     end
+
     src = strip(src)
     if !isempty(src) && !all_comments(src)
         block = CodeBlock(
             basename,
-            string(src),
+            src,
             name,
             write,
             expect_warnings,
