@@ -157,57 +157,46 @@ def output { 6 }
 
 // %% name="buzz", broken
 ic () requires not empty({"Oops"})
+
+// %% name="no errors, warnings, broken, or writes", read
+def output { 8 }
 """
         blocks = parse_code_blocks(@__DIR__, "my_code", split(code, "\n"))
 
-        @test length(blocks) == 7
+        @test length(blocks) == 8
 
         @test blocks[1] == CodeBlock(
-            "my_code", """
-// some comments
-def output { 1 }
-
-""",
+            "my_code", """// some comments
+def output { 1 }""",
             nothing, false, false, false, false, false
         )
         @test blocks[2] == CodeBlock(
-            "my_code", """
-def output { 2 }
-
-""",
+            "my_code", "def output { 2 }",
             nothing, false, false, false, false, false
         )
         @test blocks[3] == CodeBlock(
-            "my_code", """
-
-def output { 3 }
-
-""",
+            "my_code", "def output { 3 }",
             nothing, true, false, true, true, false
         )
         @test blocks[4] == CodeBlock(
-            "my_code", """
-def output { 4 }
-""",
+            "my_code", "def output { 4 }",
             "foo", false, true, false, false, false
         )
         @test blocks[5] == CodeBlock(
-            "my_code", """
-def output { 5 }
-""",
+            "my_code", "def output { 5 }",
             "bar", true, false, false, false, false
         )
         @test blocks[6] == CodeBlock(
-            "my_code", """
-def output { 6 }
-
-""",
+            "my_code", "def output { 6 }",
             "baz", true, false, false, false, false
         )
         @test blocks[7] == CodeBlock(
-            "my_code", """
-ic () requires not empty({"Oops"})""",
+            "my_code", """ic () requires not empty({"Oops"})""",
             "buzz", false, false, false, false, true
+        )
+        @test blocks[8] == CodeBlock(
+            "my_code", "def output { 8 }",
+            "no errors, warnings, broken, or writes", false, false, false, false, false
         )
     end
 end
