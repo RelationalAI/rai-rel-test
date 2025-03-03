@@ -28,9 +28,6 @@ jobs:
           package-directory: "RelationalAI/graphlib-rel"
           changes: ""
 
-      - name: Print Action Output
-        run: echo "Prepare Package Result: ${{ steps.prepare-package.outputs.result }}"
-
       - name: Test RAIRelTest
         run: |
           julia --project=. test/runtests.jl
