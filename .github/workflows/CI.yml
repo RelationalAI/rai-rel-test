@@ -23,7 +23,7 @@ jobs:
 
       - name: Run Prepare Package Action
         id: prepare-package
-        uses: ./.github/actions/prepare-package
+        uses: ./.github/actions/test-package
         with:
           package-directory: "RelationalAI/graphlib-rel"
           changes: ""
