@@ -1,0 +1,24 @@
+name: Test Action
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allows manual triggering for testing
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+
+      - name: Test new action
+        uses: ./
+        run: |
+          echo "The string from prepare_package is: ${{ steps.test-prepare.outputs.result }}"
