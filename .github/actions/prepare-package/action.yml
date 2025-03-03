@@ -1,5 +1,6 @@
-name: Test Package
-description: Executes the test suites declared by a Rel package.
+name: Prepare Package
+description: Executes the prepare_package function which prepares a database with the right
+  package code for further downstream testing.
 
 inputs:
   package-directory:
