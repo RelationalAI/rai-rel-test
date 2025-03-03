@@ -20,7 +20,7 @@ jobs:
 
       - name: Test Prepare Package Action
         id: test-prepare
-        uses: ./  # Points to action.yml in the root of this repo
+        uses: ./
 
       - name: Test new action
         run: |

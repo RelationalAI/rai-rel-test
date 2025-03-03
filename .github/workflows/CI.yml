@@ -24,3 +24,7 @@ jobs:
       - name: Test RAIRelTest
         run: |
           julia --project=. test/runtests.jl
+
+      - name: Prepare package
+        run: |
+          julia --project=. rai-rel-test.jl prepare_package
