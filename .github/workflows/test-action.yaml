@@ -18,7 +18,10 @@ jobs:
         with:
           version: '1.10'
 
+      - name: Test Prepare Package Action
+        id: test-prepare
+        uses: ./  # Points to action.yml in the root of this repo
+
       - name: Test new action
-        uses: ./
         run: |
           echo "The string from prepare_package is: ${{ steps.test-prepare.outputs.result }}"
