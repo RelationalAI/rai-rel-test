@@ -7,6 +7,9 @@ inputs:
     description: "The directory where the package sources and tests are located."
     required: false
     default: ${{ github.workspace }}
+  database-name:
+    description: "The database name"
+    required: true
 
 outputs:
   result:  # Define the output for the string
@@ -33,6 +36,6 @@ runs:
           cd $GITHUB_ACTION_PATH/../../../
           # Capture the output of the command in a variable
           RESULT=$(./rai-rel-test \
-            prepare_package "${{ inputs.package-directory }}")
+            prepare_package "${{ inputs.package-directory }} ${{ inputs.database-name }}")
           # Set the captured string as an output
           echo "result=$RESULT" >> $GITHUB_OUTPUT
