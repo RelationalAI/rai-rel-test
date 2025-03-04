@@ -21,20 +21,6 @@ jobs:
         run: |
           julia --project=./ --color=yes  -e 'using Pkg; Pkg.build()'
 
-      - uses: RelationalAI/gha-setup-rai@v1.1.0
-        with:
-          rai_profile: default
-          rai_environment: staging
-          client_id: ${{ secrets.RAICLOUD_STAGING_RELATIONALAI_GHA_TRANSIENT_CLIENT_ID }}
-          client_secret: ${{ secrets.RAICLOUD_STAGING_RELATIONALAI_GHA_TRANSIENT_CLIENT_SECRET }}
-
-      - name: Run Prepare Package Action
-        id: prepare-package
-        uses: ./.github/actions/test-package
-        with:
-          package-directory: "RelationalAI/graphlib-rel"
-          changes: ""
-
       - name: Test RAIRelTest
         run: |
           julia --project=. test/runtests.jl

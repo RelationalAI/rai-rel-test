@@ -629,7 +629,6 @@ function prepare_package(
         delete_db(db, config)
         rethrow()
     end
-    println("$db")
     return db
 end
 
