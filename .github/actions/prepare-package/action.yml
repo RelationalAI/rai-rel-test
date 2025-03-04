@@ -8,27 +8,6 @@ inputs:
     required: false
     default: ${{ github.workspace }}
 
-  pool-size:
-    description: "The size of the engine pool to use."
-    required: false
-    default: 1
-
-  engine-size:
-    description: "The size of engines to create in the pool."
-    required: false
-    default: "S"
-
-  raicode-commit:
-    description: "The commit SHA of a RAICode build to be used when creating pool engines."
-    required: false
-    default: ""
-
-  changes:
-    description: "Files that changed, to computed affected tests."
-    required: false
-    type: string
-    default: ""
-
 outputs:
   result:  # Define the output for the string
     description: 'The string returned by prepare_package'
@@ -54,10 +33,6 @@ runs:
           cd $GITHUB_ACTION_PATH/../../../
           # Capture the output of the command in a variable
           RESULT=$(./rai-rel-test \
-            --pool_size "${{ inputs.pool-size }}" \
-            --engine_size "${{ inputs.engine-size }}" \
-            --raicode_commit "${{ inputs.raicode-commit }}" \
             prepare_package "${{ inputs.package-directory }}" \
-            --changes "${{ inputs.changes }}")
           # Set the captured string as an output
           echo "result=$RESULT" >> $GITHUB_OUTPUT
