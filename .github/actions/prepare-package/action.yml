@@ -33,6 +33,6 @@ runs:
           cd $GITHUB_ACTION_PATH/../../../
           # Capture the output of the command in a variable
           RESULT=$(./rai-rel-test \
-            prepare_package "${{ inputs.package-directory }}" \
+            prepare_package "${{ inputs.package-directory }}")
           # Set the captured string as an output
           echo "result=$RESULT" >> $GITHUB_OUTPUT
