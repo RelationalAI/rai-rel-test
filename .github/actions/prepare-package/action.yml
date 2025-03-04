@@ -16,11 +16,6 @@ inputs:
     description: "The name of the engine."
     required: true
 
-outputs:
-  result:  # Define the output for the string
-    description: 'The string returned by prepare_package'
-    value: ${{ steps.prepare-package.outputs.result }}
-
 runs:
   using: 'composite'
   steps:
@@ -40,8 +35,6 @@ runs:
         run: |
           cd $GITHUB_ACTION_PATH/../../../
           # Capture the output of the command in a variable
-          RESULT=$(./rai-rel-test \
+          ./rai-rel-test \
             --engine "${{ inputs.engine-name }}" \
-            prepare_package "${{ inputs.package-directory }}" "${{ inputs.database-name }}")
-          # Set the captured string as an output
-          echo "result=$RESULT" >> $GITHUB_OUTPUT
+            prepare_package "${{ inputs.package-directory }}" "${{ inputs.database-name }}"
