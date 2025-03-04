@@ -41,7 +41,7 @@ runs:
           cd $GITHUB_ACTION_PATH/../../../
           # Capture the output of the command in a variable
           RESULT=$(./rai-rel-test \
-            --engine "${{ inputs.engine-name}} \
+            --engine "${{ inputs.engine-name }}" \
             prepare_package "${{ inputs.package-directory }}" "${{ inputs.database-name }}")
           # Set the captured string as an output
           echo "result=$RESULT" >> $GITHUB_OUTPUT
